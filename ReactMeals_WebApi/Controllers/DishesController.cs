@@ -17,7 +17,7 @@ namespace ReactMeals_WebApi.Controllers
         }
 
         //GET api/Dish/GetDish/id
-        [HttpGet("GetDish/{id}")]
+        [HttpGet("GetDish/{id:int}")]
         public ActionResult<Dish> GetDish(long id)
         {
             HttpContext.Response.Headers.Add("Access-Control-Allow-Origin", "*"); //for localhost (test)
@@ -56,6 +56,16 @@ namespace ReactMeals_WebApi.Controllers
 
             _logger.LogInformation("Returned all dishes. Length: {0}", dishList.Length);
             return dishList;
+        }
+
+        //todo
+        //insert ORDER, body value:
+        // [dish1, posotita1], [dish2, posotita2],...
+        [HttpPost("Order")]
+        public ActionResult<Order> CreateOrder([FromBody] Order order)
+        {
+            //todo
+            return new Order();
         }
     }
 }
