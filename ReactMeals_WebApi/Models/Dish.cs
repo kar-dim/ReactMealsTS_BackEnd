@@ -3,8 +3,8 @@
     public class Dish
     {
         public long Id { get; set; }
-        public string? Name { get; set; }
-        public string? Description { get; set; }
+        public string? Dish_name { get; set; }
+        public string? Dish_description { get; set; }
         public double Price { get; set; }
     }
 }
