@@ -14,6 +14,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+    await next();
+});
+
+
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
