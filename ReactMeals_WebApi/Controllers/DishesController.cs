@@ -20,7 +20,6 @@ namespace ReactMeals_WebApi.Controllers
         [HttpGet("GetDish/{id:int}")]
         public ActionResult<Dish> GetDish(long id)
         {
-            HttpContext.Response.Headers.Add("Access-Control-Allow-Origin", "*"); //for localhost (test)
             //test
             Dish[] dishList = new Dish[5];
             dishList[0] = new Dish { Id = 1, Dish_name = "Sushi", Dish_description = "Best sushi from japan!", Price = 8.37 };
@@ -45,7 +44,6 @@ namespace ReactMeals_WebApi.Controllers
         [HttpGet("GetDishes")]
         public ActionResult<IEnumerable<Dish>> GetDishes()
         {
-            HttpContext.Response.Headers.Add("Access-Control-Allow-Origin", "*"); //for localhost (test)
             //test
             Dish[] dishList = new Dish[5];
             dishList[0] = new Dish { Id = 1, Dish_name = "Sushi", Dish_description = "Best sushi from japan!", Price = 8.37 };
