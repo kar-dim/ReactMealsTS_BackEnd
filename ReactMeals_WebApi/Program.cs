@@ -1,9 +1,21 @@
+using System.Reflection.PortableExecutable;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins, 
+        policy => {  
+            policy.WithOrigins("*");
+            policy.AllowAnyMethod();
+            policy.WithHeaders("X-Requested-With", "Content-Type");
+        });
+});
 
 var app = builder.Build();
 
@@ -14,11 +26,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.Use(async (context, next) =>
-{
-    context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
-    await next();
-});
+app.UseCors(MyAllowSpecificOrigins);
 
 
 app.UseHttpsRedirection();
