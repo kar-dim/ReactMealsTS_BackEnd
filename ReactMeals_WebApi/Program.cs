@@ -1,17 +1,22 @@
+using ReactMeals_WebApi.Models;
+using ReactMeals_WebApi.Services;
 using System.Reflection.PortableExecutable;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.Configure<JimmysFoodzillaDatabaseSettings>(builder.Configuration.GetSection("JimmysFoodzillaDatabase"));
+builder.Services.AddSingleton<JimmysFoodzillaService>();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+var allowFrontendOnly = "allowFrontendOnly";
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(name: MyAllowSpecificOrigins, 
+    options.AddPolicy(name: allowFrontendOnly, 
         policy => {  
-            policy.WithOrigins("*");
+            policy.WithOrigins("http://localhost:3001");
             policy.AllowAnyMethod();
             policy.WithHeaders("X-Requested-With", "Content-Type");
         });
@@ -26,7 +31,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors(MyAllowSpecificOrigins);
+app.UseCors(allowFrontendOnly);
 
 
 app.UseHttpsRedirection();
