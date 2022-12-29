@@ -1,6 +1,7 @@
 ﻿using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson;
 using System.Text.Json.Serialization;
+using System.Runtime.Serialization;
 
 namespace ReactMeals_WebApi.Models
 {
@@ -13,7 +14,7 @@ namespace ReactMeals_WebApi.Models
     {
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
-        [JsonIgnore]
+        [IgnoreDataMember]
         public string? Id { get; set; }
         public OrderItem[]? order { get; set; }   
     }

@@ -1,5 +1,6 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 
 namespace ReactMeals_WebApi.Models
@@ -8,7 +9,7 @@ namespace ReactMeals_WebApi.Models
     {
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
-        [JsonIgnore]
+        [IgnoreDataMember]
         public string? Id { get; set; }
 
         public long Dish_id { get; set; }
