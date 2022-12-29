@@ -51,9 +51,15 @@ namespace ReactMeals_WebApi.Controllers
         //insert ORDER, body value:
         // order: [dish1, posotita1], [dish2, posotita2],...
         [HttpPost("Order")]
-        public async Task<ActionResult<Order>> CreateOrder([FromBody] Order order)
+        public async Task<ActionResult<Order>> CreateOrder([FromBody] Order webOrder)
         { 
             Console.WriteLine("ORDER RECEIVED!");
+
+            if (webOrder is null || webOrder.order.Length == 0)
+            {
+                //wrong input data, something bad happened on CLIENT side -> 400
+                return BadRequest();
+            }
             List<Dish> dishList = await _dbService.GetDishesAsync();
             if (dishList is null)
             {
@@ -68,7 +74,7 @@ namespace ReactMeals_WebApi.Controllers
             }
 
             //(kanonika thelei kai athroisma twn order items tis paraggelias gia na mpei sth vash)
-            foreach (OrderItem item in order.order)
+            foreach (OrderItem item in webOrder.order)
             {
                 string dishName = "";
                 bool idExistsInDb = false;
@@ -89,8 +95,8 @@ namespace ReactMeals_WebApi.Controllers
                 Console.WriteLine("Dish Id: {0}, Dish NAME: {1}, Dish Counter: {2}", item.Dish_id, dishName, item.Dish_counter);
             }
             //no errors -> tha steilei 200 + sto body to webOrder (praktika to idio object poy mas esteile)
-            
-            return Ok(order);
+            //TODO -> isws na steiloume 201 me LOCATION REF HEADER to new obj? (omws aplws mpainei sth VASH, den yparxei kapoy sto sait gia reference)
+            return Ok(webOrder);
         }
     }
 }
