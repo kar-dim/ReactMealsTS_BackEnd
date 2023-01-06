@@ -70,7 +70,7 @@ namespace ReactMeals_WebApi.Controllers
             if (dishList.Count == 0)
             {
                 //404
-                return NotFound("At least on Dish ID does not exist!");
+                return NotFound("At least one Dish ID does not exist!");
             }
 
             //(kanonika thelei kai athroisma twn order items tis paraggelias gia na mpei sth vash)
