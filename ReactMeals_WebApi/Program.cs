@@ -1,8 +1,27 @@
+using App.Metrics.Formatters.Prometheus;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.Options;
+using MongoDB.Driver;
 using ReactMeals_WebApi.Models;
 using ReactMeals_WebApi.Services;
 using System.Reflection.PortableExecutable;
 
 var builder = WebApplication.CreateBuilder(args);
+
+//metrics
+builder.Host.UseMetricsWebTracking();
+builder.Host.UseMetricsEndpoints(endpointsOptions =>
+{
+    endpointsOptions.MetricsTextEndpointOutputFormatter = new MetricsPrometheusTextOutputFormatter();
+    endpointsOptions.MetricsEndpointOutputFormatter = new MetricsPrometheusProtobufOutputFormatter();
+    endpointsOptions.EnvironmentInfoEndpointEnabled = false;
+});
+
+builder.Host.ConfigureAppMetricsHostingConfiguration(options =>
+{
+    options.MetricsEndpoint = "/meals_metrics";
+    options.MetricsTextEndpoint = "/meals_metrics-text";
+});
 
 // Add services to the container.
 builder.Services.Configure<JimmysFoodzillaDatabaseSettings>(builder.Configuration.GetSection("JimmysFoodzillaDatabase"));
@@ -11,6 +30,13 @@ builder.Services.AddSingleton<JimmysFoodzillaService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddControllers();
+
+//metrics
+//builder.Services.Configure<KestrelServerOptions>(options => { { options.AllowSynchronousIO = true;  } })
+builder.Services.AddMetrics();
+
+//cors
 var allowFrontendOnly = "allowFrontendOnly";
 builder.Services.AddCors(options =>
 {
