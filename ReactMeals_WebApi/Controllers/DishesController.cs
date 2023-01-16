@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using App.Metrics;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ReactMeals_WebApi.Models;
 using ReactMeals_WebApi.Services;
+using ReactMeals_WebApi.Metrics;
 
 namespace ReactMeals_WebApi.Controllers
 {
@@ -11,17 +13,21 @@ namespace ReactMeals_WebApi.Controllers
     {
         private readonly ILogger<DishesController> _logger;
         private readonly JimmysFoodzillaService _dbService;
+        private readonly IMetrics _metrics;
 
-        public DishesController(JimmysFoodzillaService dbService, ILogger<DishesController> logger)
+        public DishesController(JimmysFoodzillaService dbService, ILogger<DishesController> logger, IMetrics metrics)
         {
             _dbService = dbService;
             _logger = logger;
+            _metrics = metrics;
         }
 
         //GET api/Dish/GetDish/id
         [HttpGet("GetDish/{id:int}")]
         public async Task<ActionResult<Dish>> GetDish(long id)
         {
+            _metrics.Measure.Counter.Increment(MetricsRegistry.DishRequestCounter);
+
             Dish foundDish = await _dbService.GetDishAsync(id);
             if (foundDish is null)
             {
@@ -37,6 +43,8 @@ namespace ReactMeals_WebApi.Controllers
         [HttpGet("GetDishes")]
         public async Task<ActionResult<IEnumerable<Dish>>> GetDishes()
         {
+            _metrics.Measure.Counter.Increment(MetricsRegistry.DishesRequestCounter);
+
             List<Dish> foundDishes = await _dbService.GetDishesAsync();
             if (foundDishes is null || foundDishes.Count == 0)
             {
@@ -47,12 +55,13 @@ namespace ReactMeals_WebApi.Controllers
             return Ok(foundDishes);
         }
 
-        //todo
         //insert ORDER, body value:
         // order: [dish1, posotita1], [dish2, posotita2],...
         [HttpPost("Order")]
         public async Task<ActionResult<Order>> CreateOrder([FromBody] Order webOrder)
-        { 
+        {
+            _metrics.Measure.Counter.Increment(MetricsRegistry.CreatedOrdersCounter);
+
             Console.WriteLine("ORDER RECEIVED!");
 
             if (webOrder is null || webOrder.order.Length == 0)
