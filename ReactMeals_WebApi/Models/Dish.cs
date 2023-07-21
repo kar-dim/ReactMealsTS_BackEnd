@@ -1,21 +1,15 @@
-﻿using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
-using System.Runtime.Serialization;
-using System.Text.Json.Serialization;
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 
 namespace ReactMeals_WebApi.Models
 {
     public class Dish
     {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        [IgnoreDataMember]
-        public string? Id { get; set; }
-
-        public long Dish_id { get; set; }
-
+        [Key]
+        public int DishId { get; set; }
         public string? Dish_name { get; set; }
         public string? Dish_description { get; set; }
-        public double Price { get; set; }
+        [Precision(18, 2)]
+        public decimal Price { get; set; }
     }
 }
