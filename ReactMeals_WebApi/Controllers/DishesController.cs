@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ReactMeals_WebApi.Contexts;
 using ReactMeals_WebApi.DTO;
@@ -52,7 +53,10 @@ namespace ReactMeals_WebApi.Controllers
 
         //insert ORDER, body value:
         // order: [dish1, posotita1], [dish2, posotita2],...
+        //must be logged in -> usage of Authorize attribute (auth0 jwt checks)
+        //TODO: add USER_ID in request (front-end) AND add the user in back-end
         [HttpPost("Order")]
+        [Authorize]
         public async Task<ActionResult<Order>> CreateOrder([FromBody] OrderDTO webOrder)
         {
 
