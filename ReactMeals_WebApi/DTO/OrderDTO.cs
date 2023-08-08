@@ -11,6 +11,7 @@ namespace ReactMeals_WebApi.DTO
     public class OrderDTO
     {
         public List<OrderItemDTO>? order { get; set; }
+        public string UserId { get; set; }
     }
 
     public class OrderDTOMapping

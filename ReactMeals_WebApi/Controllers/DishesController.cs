@@ -12,11 +12,11 @@ namespace ReactMeals_WebApi.Controllers
     public class DishesController : ControllerBase
     {
         private readonly ILogger<DishesController> _logger;
-        private readonly OrdersDbContext _ordersDbContext;
+        private readonly MainDbContext _mainDbContext;
 
-        public DishesController(ILogger<DishesController> logger, OrdersDbContext ordersDbContext)
+        public DishesController(ILogger<DishesController> logger, MainDbContext ordersDbContext)
         {
-            _ordersDbContext = ordersDbContext;
+            _mainDbContext = ordersDbContext;
             _logger = logger;
         }
 
@@ -25,7 +25,7 @@ namespace ReactMeals_WebApi.Controllers
         public async Task<ActionResult<Dish>> GetDish(long id)
         {
 
-            Dish? foundDish = await (from x in _ordersDbContext.Dishes where x.DishId == id select x).FirstOrDefaultAsync();
+            Dish? foundDish = await (from x in _mainDbContext.Dishes where x.DishId == id select x).FirstOrDefaultAsync();
             if (foundDish is null)
             {
                 _logger.LogError("Could not find dish with ID {0}", id);
@@ -41,7 +41,7 @@ namespace ReactMeals_WebApi.Controllers
         public async Task<ActionResult<IEnumerable<Dish>>> GetDishes()
         {
 
-            List<Dish> foundDishes = await _ordersDbContext.Dishes.ToListAsync();
+            List<Dish> foundDishes = await _mainDbContext.Dishes.ToListAsync();
             if (foundDishes is null || foundDishes.Count == 0)
             {
                 _logger.LogError("Could not find dishes");
@@ -56,7 +56,7 @@ namespace ReactMeals_WebApi.Controllers
         //must be logged in -> usage of Authorize attribute (auth0 jwt checks)
         //TODO: add USER_ID in request (front-end) AND add the user in back-end
         [HttpPost("Order")]
-        [Authorize]
+        [Authorize(AuthenticationSchemes = "Default")]
         public async Task<ActionResult<Order>> CreateOrder([FromBody] OrderDTO webOrder)
         {
 
@@ -67,7 +67,7 @@ namespace ReactMeals_WebApi.Controllers
                 //wrong input data, something bad happened on CLIENT side -> 400
                 return BadRequest();
             }
-            List<Dish> dishList = await _ordersDbContext.Dishes.ToListAsync();
+            List<Dish> dishList = await _mainDbContext.Dishes.ToListAsync();
             if (dishList is null)
             {
                 //something bad happened on OUR side -> 500
@@ -106,9 +106,9 @@ namespace ReactMeals_WebApi.Controllers
             //todo check this
             Order orderToInsert = OrderDTOMapping.DTOtoEntity(webOrder);
             orderToInsert.totalCost = cost;
-            await _ordersDbContext.AddAsync(orderToInsert);
+            await _mainDbContext.AddAsync(orderToInsert);
 
-            await _ordersDbContext.SaveChangesAsync();
+            await _mainDbContext.SaveChangesAsync();
             //no errors -> tha steilei 200 + sto body to webOrder (praktika to idio object poy mas esteile)
             //TODO -> isws na steiloume 201 me LOCATION REF HEADER to new obj? (omws aplws mpainei sth VASH, den yparxei kapoy sto site gia reference)
             return Ok(webOrder);
