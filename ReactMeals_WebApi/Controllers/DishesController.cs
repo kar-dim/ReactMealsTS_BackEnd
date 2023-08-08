@@ -52,9 +52,8 @@ namespace ReactMeals_WebApi.Controllers
         }
 
         //insert ORDER, body value:
-        // order: [dish1, posotita1], [dish2, posotita2],...
+        // order: [dish1, posotita1], [dish2, posotita2],... userId
         //must be logged in -> usage of Authorize attribute (auth0 jwt checks)
-        //TODO: add USER_ID in request (front-end) AND add the user in back-end
         [HttpPost("Order")]
         [Authorize(AuthenticationSchemes = "Default")]
         public async Task<ActionResult<Order>> CreateOrder([FromBody] OrderDTO webOrder)
@@ -103,7 +102,6 @@ namespace ReactMeals_WebApi.Controllers
                 Console.WriteLine("Dish Id: {0}, Dish NAME: {1}, Dish Counter: {2}", item.DishId, dishName, item.Dish_counter);
             }
 
-            //todo check this
             Order orderToInsert = OrderDTOMapping.DTOtoEntity(webOrder);
             orderToInsert.totalCost = cost;
             await _mainDbContext.AddAsync(orderToInsert);
