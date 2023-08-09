@@ -52,7 +52,7 @@ namespace ReactMeals_WebApi.Controllers
         }
 
         //insert ORDER, body value:
-        // order: [dish1, posotita1], [dish2, posotita2],... userId
+        // order: ([dish1, posotita1], [dish2, posotita2],... userId)
         //must be logged in -> usage of Authorize attribute (auth0 jwt checks)
         [HttpPost("Order")]
         [Authorize(AuthenticationSchemes = "Default")]
@@ -61,7 +61,7 @@ namespace ReactMeals_WebApi.Controllers
 
             Console.WriteLine("ORDER RECEIVED!");
 
-            if (webOrder is null || webOrder.order is null || webOrder.order.Count == 0)
+            if (webOrder is null || webOrder.order is null || webOrder.UserId is null || webOrder.order.Count == 0)
             {
                 //wrong input data, something bad happened on CLIENT side -> 400
                 return BadRequest();
@@ -104,12 +104,12 @@ namespace ReactMeals_WebApi.Controllers
 
             Order orderToInsert = OrderDTOMapping.DTOtoEntity(webOrder);
             orderToInsert.totalCost = cost;
-            await _mainDbContext.AddAsync(orderToInsert);
 
+            await _mainDbContext.AddAsync(orderToInsert);
             await _mainDbContext.SaveChangesAsync();
-            //no errors -> tha steilei 200 + sto body to webOrder (praktika to idio object poy mas esteile)
-            //TODO -> isws na steiloume 201 me LOCATION REF HEADER to new obj? (omws aplws mpainei sth VASH, den yparxei kapoy sto site gia reference)
-            return Ok(webOrder);
+            //no errors -> 200 + empty body
+            //TODO ->  201 + LOCATION REF HEADER the new obj? (there is no URI LOCATION though)
+            return Ok();
         }
     }
 }
