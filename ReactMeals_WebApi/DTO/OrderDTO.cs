@@ -27,7 +27,7 @@ namespace ReactMeals_WebApi.DTO
                     Dish_counter = orderDTO.order[i].Dish_counter,
                 });
             }
-            return new Order() { order = items };
+            return new Order() { order = items, UserId = orderDTO.UserId};
         }
     }
 }

@@ -4,13 +4,13 @@ AFTER REGISTER ACTION (GET ACCESS TOKEN FROM M2M AUTH0 API + CALL BACKEND API TO
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 */
 
-
 const axios = require("axios");
 
 exports.onExecutePostUserRegistration = async (event) => {
 
-  const client_id = "Jifzocq6ozlob8VlGi2WeWKRz4PYPaG3";
-  const client_secret = "hA5k2t5mAPpKUfEfKQbI7FE3RjMx3wXO_TWYlXCasXL1sWPFivsPYXT37Rbkz6d9";
+  //dev client id/client secret, stored online in Auth0 action as Secret Values
+  const client_id = event.secrets.CLIENT_ID;
+  const client_secret = event.secrets.CLIENT_SECRET;
 
   //Request the access token
   let options = { method: 'POST',
@@ -47,6 +47,7 @@ exports.onExecutePostUserRegistration = async (event) => {
     throw new Error('Could Not Insert User To .NET API');
   }
 };
+
 
 
 /* 
