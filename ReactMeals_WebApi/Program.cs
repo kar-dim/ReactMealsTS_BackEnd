@@ -23,9 +23,9 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: allowFrontendOnly, 
         policy => {  
-            policy.WithOrigins("http://192.168.1.2:3000", "http://localhost:3001", "http://localhost:3000");
+            policy.WithOrigins("http://localhost:3000");
             policy.AllowAnyMethod();
-            policy.WithHeaders("X-Requested-With", "Content-Type", "Authorization");
+            policy.WithHeaders("X-Requested-With", "Content-Type", "Authorization", "ngrok-skip-browser-warning");
         });
 });
 
@@ -71,7 +71,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(); 
 }
 
 app.UseCors(allowFrontendOnly);
