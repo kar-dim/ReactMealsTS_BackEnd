@@ -6,6 +6,7 @@ using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
 using System;
 using System.Collections.Generic;
+using System.Security.Claims;
 using Order = ReactMeals_WebApi.Models.Order;
 
 namespace ReactMeals_WebApi.Controllers
@@ -120,6 +121,11 @@ namespace ReactMeals_WebApi.Controllers
         [Authorize(AuthenticationSchemes = "Default")]
         public async Task<ActionResult<UserOrdersDTO>> GetUserOrders(string userId)
         {
+            //check the user id of the token versus the one received from the web
+            if (!User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value.Equals(userId))
+            {
+                return Unauthorized();
+            }
             //search the OrderItem table to see if this user has any orders
             var allUserOrdersQuery = from orderItem in _mainDbContext.OrderItems
                         join order in _mainDbContext.Orders on orderItem.OrderId equals order.Id
