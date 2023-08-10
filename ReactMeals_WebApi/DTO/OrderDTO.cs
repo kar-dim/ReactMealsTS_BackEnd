@@ -16,7 +16,7 @@ namespace ReactMeals_WebApi.DTO
 
     public class OrderDTOMapping
     {
-        public static Order DTOtoEntity(OrderDTO orderDTO)
+        public static Models.Order DTOtoEntity(OrderDTO orderDTO)
         {
             ICollection<OrderItem> items = new List<OrderItem>();
             for (int i=0; i<orderDTO.order.Count; i++)
@@ -27,7 +27,7 @@ namespace ReactMeals_WebApi.DTO
                     Dish_counter = orderDTO.order[i].Dish_counter,
                 });
             }
-            return new Order() { order = items, UserId = orderDTO.UserId};
+            return new Models.Order() { order = items, UserId = orderDTO.UserId};
         }
     }
 }

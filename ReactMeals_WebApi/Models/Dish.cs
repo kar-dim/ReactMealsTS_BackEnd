@@ -12,4 +12,9 @@ namespace ReactMeals_WebApi.Models
         [Precision(18, 2)]
         public decimal Price { get; set; }
     }
+
+    public class DishWithCounter : Dish
+    {
+        public int Dish_counter { get; set; }
+    }
 }

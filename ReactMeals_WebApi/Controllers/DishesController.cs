@@ -4,6 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using ReactMeals_WebApi.Contexts;
 using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
+using System;
+using System.Collections.Generic;
+using Order = ReactMeals_WebApi.Models.Order;
 
 namespace ReactMeals_WebApi.Controllers
 {
@@ -20,7 +23,7 @@ namespace ReactMeals_WebApi.Controllers
             _logger = logger;
         }
 
-        //GET api/Dish/GetDish/id
+        //GET api/Dishes/GetDish/id
         [HttpGet("GetDish/{id:int}")]
         public async Task<ActionResult<Dish>> GetDish(long id)
         {
@@ -33,10 +36,10 @@ namespace ReactMeals_WebApi.Controllers
             }
             _logger.LogInformation("Found dish with ID {0}", id);
             return Ok(foundDish);
-            
+
         }
 
-        //GET api/Dish/GetDishes
+        //GET api/Dishes/GetDishes
         [HttpGet("GetDishes")]
         public async Task<ActionResult<IEnumerable<Dish>>> GetDishes()
         {
@@ -87,7 +90,8 @@ namespace ReactMeals_WebApi.Controllers
                 //if no orders in DB -> no need to check anything
                 foreach (Dish dish in dishList)
                 {
-                    if (item.DishId == dish.DishId) {
+                    if (item.DishId == dish.DishId)
+                    {
                         idExistsInDb = true;
                         dishName = dish.Dish_name;
                         cost += dish.Price;
@@ -110,6 +114,58 @@ namespace ReactMeals_WebApi.Controllers
             //no errors -> 200 + empty body
             //TODO ->  201 + LOCATION REF HEADER the new obj? (there is no URI LOCATION though)
             return Ok();
+        }
+
+        [HttpGet("GetUserOrders/{userId}")]
+        [Authorize(AuthenticationSchemes = "Default")]
+        public async Task<ActionResult<UserOrdersDTO>> GetUserOrders(string userId)
+        {
+            //search the OrderItem table to see if this user has any orders
+            var allUserOrdersQuery = from orderItem in _mainDbContext.OrderItems
+                        join order in _mainDbContext.Orders on orderItem.OrderId equals order.Id
+                        join dish in _mainDbContext.Dishes on orderItem.DishId equals dish.DishId
+                        where order.UserId == userId
+                        select new
+                        {
+                            orderItem.Id,
+                            orderItem.OrderId,
+                            order.totalCost,
+                            orderItem.DishId,
+                            orderItem.Dish_counter,
+                            dish.Dish_name,
+                            dish.Dish_description,
+                            dish.Price
+                        };
+
+            var allUserOrders = await allUserOrdersQuery.ToListAsync();
+            if (allUserOrders == null || allUserOrders.Count == 0)
+            {
+                return Ok(new UserOrdersDTO { orders = new UserOrder[]{} } ); //empty response -> user has no orders (technically not an error)
+            }
+            List<UserOrder> userOrderList = new List<UserOrder>();
+            //split the list into sublists, each group is one order of a specific user
+            foreach (var group in allUserOrders.GroupBy(x => x.OrderId))
+            {
+                var groupSubList = group.ToList();
+                var tempList = new List<DishWithCounter>();
+                foreach (var dish in groupSubList)
+                {
+                    tempList.Add(new DishWithCounter { 
+                        DishId = dish.DishId, 
+                        Dish_description = dish.Dish_description,
+                        Dish_name = dish.Dish_name,
+                        Price = dish.Price,
+                        Dish_counter = dish.Dish_counter
+                    }); 
+                }
+                userOrderList.Add(new UserOrder
+                {
+                    Dishes = tempList.ToArray(),
+                    TotalCost = (decimal)groupSubList[0].totalCost
+                });
+            }
+            //send back the user's orders
+            return Ok(new UserOrdersDTO { orders = userOrderList.ToArray() });
         }
     }
 }
