@@ -95,7 +95,7 @@ namespace ReactMeals_WebApi.Controllers
                     {
                         idExistsInDb = true;
                         dishName = dish.Dish_name;
-                        cost += dish.Price;
+                        cost += dish.Price * item.Dish_counter;
                         break;
                     }
                 }
@@ -152,6 +152,7 @@ namespace ReactMeals_WebApi.Controllers
             //split the list into sublists, each group is one order of a specific user
             foreach (var group in allUserOrders.GroupBy(x => x.OrderId))
             {
+                int orderId = group.Key;
                 var groupSubList = group.ToList();
                 var tempList = new List<DishWithCounter>();
                 foreach (var dish in groupSubList)
@@ -166,6 +167,7 @@ namespace ReactMeals_WebApi.Controllers
                 }
                 userOrderList.Add(new UserOrder
                 {
+                    Id = orderId,
                     Dishes = tempList.ToArray(),
                     TotalCost = (decimal)groupSubList[0].totalCost
                 });

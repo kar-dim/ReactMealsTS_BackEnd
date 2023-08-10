@@ -5,6 +5,7 @@ namespace ReactMeals_WebApi.DTO
     //classes used by the "GetUserOrders" controller
     public class UserOrder
     {
+        public int Id { get; set; }
         public DishWithCounter[] Dishes { get; set; }
         public decimal TotalCost { get; set; }
     }
