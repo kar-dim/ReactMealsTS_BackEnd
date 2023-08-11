@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using ReactMeals_WebApi.Contexts;
 using System.Security.Claims;
@@ -75,6 +76,14 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors(allowFrontendOnly);
+
+//for static images
+app.UseStaticFiles(new StaticFileOptions()
+{
+    FileProvider = new PhysicalFileProvider(
+                           Path.Combine(Directory.GetCurrentDirectory(), @"Images")),
+    RequestPath = new PathString("/dishimages")
+});
 
 app.UseHttpsRedirection();
 
