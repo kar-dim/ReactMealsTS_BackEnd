@@ -12,7 +12,7 @@ using ReactMeals_WebApi.Contexts;
 namespace ReactMeals_WebApi.Migrations
 {
     [DbContext(typeof(MainDbContext))]
-    [Migration("20230808173323_migrate")]
+    [Migration("20230811075808_migrate")]
     partial class migrate
     {
         /// <inheritdoc />
@@ -36,7 +36,13 @@ namespace ReactMeals_WebApi.Migrations
                     b.Property<string>("Dish_description")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Dish_extended_info")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Dish_name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Dish_url")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Price")

@@ -18,7 +18,9 @@ namespace ReactMeals_WebApi.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Dish_name = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Dish_description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Price = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false)
+                    Price = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    Dish_extended_info = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Dish_url = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {

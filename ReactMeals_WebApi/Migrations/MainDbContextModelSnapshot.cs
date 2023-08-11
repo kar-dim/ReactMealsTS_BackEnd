@@ -33,7 +33,13 @@ namespace ReactMeals_WebApi.Migrations
                     b.Property<string>("Dish_description")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Dish_extended_info")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Dish_name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Dish_url")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Price")
