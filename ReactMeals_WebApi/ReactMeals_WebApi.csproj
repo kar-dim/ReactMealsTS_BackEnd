@@ -21,4 +21,8 @@
     <Folder Include="Services\" />
   </ItemGroup>
 
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="xcopy &quot;$(ProjectDir)Images\&quot; &quot;$(TargetDir)Images\&quot; /S /Y" />
+  </Target>
+
 </Project>
