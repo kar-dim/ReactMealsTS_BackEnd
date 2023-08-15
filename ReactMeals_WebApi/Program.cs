@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using ReactMeals_WebApi.Contexts;
@@ -63,6 +64,10 @@ builder.Services.AddAuthorization(options =>
 
 //our custom services
 builder.Services.AddSingleton<IImageValidationService, ImageValidationService>();
+//ngrok
+if (builder.Environment.IsDevelopment())
+    builder.Services.AddHostedService<NgrokTunnelService>();
+
 
 var app = builder.Build();
 
@@ -70,7 +75,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(); 
+    app.UseSwaggerUI();
 }
 
 app.UseCors(allowFrontendOnly);
