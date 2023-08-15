@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using ReactMeals_WebApi.Contexts;
+using ReactMeals_WebApi.Services;
 using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,7 +17,6 @@ builder.Services.AddDbContext<MainDbContext>(options =>
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddControllers();
 
 //cors (test only + frontend with VERCEL)
 var allowFrontendOnly = "allowFrontendOnly";
@@ -53,18 +53,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     };
 });
 
-//Authorization (needed??)
-/*
+//authorization for policies (admin etc)
 builder.Services.AddAuthorization(options =>
 {
-    var defaultAuthorizationPolicyBuilder = new AuthorizationPolicyBuilder(
-        JwtBearerDefaults.AuthenticationScheme,
-        "M2M_UserRegister");
-    defaultAuthorizationPolicyBuilder =
-        defaultAuthorizationPolicyBuilder.RequireAuthenticatedUser();
-    options.DefaultPolicy = defaultAuthorizationPolicyBuilder.Build();
+    //check the access token's "permission" scope and search for the "admin:admin" claim
+    options.AddPolicy("AdminPolicy", policy =>
+          policy.RequireClaim("permissions", "admin:admin"));
 });
-*/
+
+//our custom services
+builder.Services.AddSingleton<IImageValidationService, ImageValidationService>();
 
 var app = builder.Build();
 
