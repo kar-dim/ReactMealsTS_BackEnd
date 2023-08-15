@@ -4,8 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using ReactMeals_WebApi.Contexts;
 using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
-using System;
-using System.Collections.Generic;
+using ReactMeals_WebApi.Services;
 using System.Security.Claims;
 using Order = ReactMeals_WebApi.Models.Order;
 
@@ -17,14 +16,16 @@ namespace ReactMeals_WebApi.Controllers
     {
         private readonly ILogger<DishesController> _logger;
         private readonly MainDbContext _mainDbContext;
-
-        public DishesController(ILogger<DishesController> logger, MainDbContext ordersDbContext)
+        private readonly IImageValidationService _imageValidationService;
+        public DishesController(ILogger<DishesController> logger, IImageValidationService imageValidationService, MainDbContext ordersDbContext)
         {
             _mainDbContext = ordersDbContext;
+            _imageValidationService = imageValidationService;
             _logger = logger;
         }
 
         //GET api/Dishes/GetDish/id
+        //public method
         [HttpGet("GetDish/{id:int}")]
         public async Task<ActionResult<Dish>> GetDish(long id)
         {
@@ -41,10 +42,10 @@ namespace ReactMeals_WebApi.Controllers
         }
 
         //GET api/Dishes/GetDishes
+        //public method
         [HttpGet("GetDishes")]
         public async Task<ActionResult<IEnumerable<Dish>>> GetDishes()
         {
-
             List<Dish> foundDishes = await _mainDbContext.Dishes.ToListAsync();
             if (foundDishes is null || foundDishes.Count == 0)
             {
@@ -53,6 +54,83 @@ namespace ReactMeals_WebApi.Controllers
             }
             _logger.LogInformation("Returned all dishes. Length: {0}", foundDishes.Count);
             return Ok(foundDishes);
+        }
+
+
+        //POST api/Dishes/AddDish
+        //only for Admins, to add new dish to the database
+        [Authorize(AuthenticationSchemes = "Default", Policy = "AdminPolicy")]
+        [HttpPost("AddDish")]
+        public async Task<ActionResult<Dish>> AddDish([FromBody] AddDishDTO newDish)
+        {
+            //search in db(if exists-> return 409 CONFLICT)
+            //we don't have the ID yet, search by other parameters
+            var foundInDb = await _mainDbContext.Dishes
+                .Where(x => x.Dish_name.Equals(newDish.Dish_name))
+                .Where(x => x.Dish_description.Equals(newDish.Dish_description))
+                .Where(x => x.Price.Equals(newDish.Price))
+                .Where(x => x.Dish_extended_info.Equals(newDish.Dish_extended_info))
+                .ToListAsync();
+            if (foundInDb != null && foundInDb.Count > 0)
+            {
+                return StatusCode(409, "Dish Already Exists");
+            }
+            //get the base64 dish image data
+            byte[] imageBytes = Convert.FromBase64String(newDish.Dish_image_base64);
+            //some very basic validation (magic bytes)
+            string? extension = _imageValidationService.IsValidImageMagicBytes(imageBytes);
+            if (extension == null)
+            {
+                return BadRequest("Invalid Image Data");
+            }
+
+            //now insert the dish into the db and receive the DishID returned
+            string imageFileName = newDish.Dish_name.Trim().Replace(' ', '_').ToLower() + "." + extension;
+            Dish newDishToAdd = new Dish
+            {
+                Dish_name = newDish.Dish_name,
+                Dish_description = newDish.Dish_description,
+                Dish_extended_info = newDish.Dish_extended_info,
+                Price = newDish.Price,
+                Dish_url = imageFileName
+            };
+
+            await _mainDbContext.AddAsync(newDishToAdd);
+            //insert to db
+            await _mainDbContext.SaveChangesAsync();
+
+            //if all OK, put the image into "Images" static files folder
+            string filePath = @"Images\" + imageFileName;
+            // Write image data to the static assets folder
+            System.IO.File.WriteAllBytes(filePath, imageBytes);
+
+            return Ok(newDishToAdd);
+        }
+
+
+        //PUT api/Dishes/UpdateDish
+        //only for Admins, to edit a dish
+        [Authorize(AuthenticationSchemes = "Default", Policy = "AdminPolicy")]
+        [HttpPut("UpdateDish")]
+        public async Task<ActionResult<Dish>> UpdateDish([FromBody] Dish newDish)
+        {
+
+            //todo, search in db and put the new values in db (if it does not exist -> 404)
+            return Ok();
+        }
+
+
+        //DELETE api/Dishes/DeleteDish
+        //only for Admins, to delete a dish
+        [Authorize(AuthenticationSchemes = "Default", Policy = "AdminPolicy")]
+        [HttpDelete("DeleteDish/{id:int}")]
+        public async Task<ActionResult<Dish>> DeleteDish(long id)
+        {
+            //check if user is admin (role)
+            //
+
+            //todo, search in db (if exists -> return 404 not found dish to delete)
+            return Ok();
         }
 
         //insert ORDER, body value:
