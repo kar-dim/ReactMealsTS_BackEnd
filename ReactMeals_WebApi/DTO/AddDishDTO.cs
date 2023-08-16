@@ -14,6 +14,11 @@ namespace ReactMeals_WebApi.DTO
         public string Dish_image_base64 { get; set; } //base64 encoded image sent from client
     }
 
+    public class AddDishDTOWithId : AddDishDTO
+    {
+        public int DishId { get; set; }
+    }
+
     public class AddDishDTOMapping
     {
         public static Dish DTOtoEntity(AddDishDTO addDishDTO)
