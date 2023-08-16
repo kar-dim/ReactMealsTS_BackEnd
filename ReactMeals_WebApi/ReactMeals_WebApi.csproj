@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy &quot;$(ProjectDir)Images\&quot; &quot;$(TargetDir)Images\&quot; /S /Y" />
+    <Exec Command="(robocopy &quot;$(ProjectDir)Images&quot; &quot;$(TargetDir)Images&quot; /E /PURGE) ^&amp; IF %25ERRORLEVEL%25 LEQ 8 exit 0" />
   </Target>
 
 </Project>
