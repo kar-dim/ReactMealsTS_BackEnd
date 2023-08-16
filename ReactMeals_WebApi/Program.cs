@@ -17,7 +17,7 @@ builder.Services.AddDbContext<MainDbContext>(options =>
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+//builder.Services.AddSwaggerGen();
 
 //cors (test only + frontend with VERCEL)
 var allowFrontendOnly = "allowFrontendOnly";
@@ -71,12 +71,13 @@ if (builder.Environment.IsDevelopment())
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+/*
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+*/
 
 app.UseCors(allowFrontendOnly);
 

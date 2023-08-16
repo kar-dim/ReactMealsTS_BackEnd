@@ -1,6 +1,7 @@
 ﻿using CliWrap;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Hosting.Server;
+using CliWrap.Exceptions;
 
 namespace ReactMeals_WebApi.Services
 {
@@ -43,8 +44,22 @@ namespace ReactMeals_WebApi.Services
             return completionSource.Task;
         }
 
-        private CommandTask<CommandResult> StartNgrokTunnel(string localUrl, string ngrokUrl, CancellationToken stoppingToken)
+        private async Task<CommandTask<CommandResult>> StartNgrokTunnel(string localUrl, string ngrokUrl, CancellationToken stoppingToken)
         {
+            try
+            {
+                //kill existing ngrok
+                //taskkill / f / im ngrok.exe
+                await Cli.Wrap("taskkill")
+                        .WithArguments(args => args
+                        .Add("/f")
+                        .Add("/im")
+                        .Add("ngrok.exe"))
+                    .WithStandardOutputPipe(PipeTarget.ToDelegate(s => _logger.LogDebug(s)))
+                    .WithStandardErrorPipe(PipeTarget.ToDelegate(s => _logger.LogError(s)))
+                    .ExecuteAsync(stoppingToken);
+            } catch (CommandExecutionException){ /*ignore, don't care if no ngrok processes are killed*/ }
+
             var ngrokTask = Cli.Wrap("ngrok")
                 .WithArguments(args => args
                     .Add("http")

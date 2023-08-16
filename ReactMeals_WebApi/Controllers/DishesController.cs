@@ -6,6 +6,7 @@ using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
 using ReactMeals_WebApi.Services;
 using System.Security.Claims;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 using Order = ReactMeals_WebApi.Models.Order;
 
 namespace ReactMeals_WebApi.Controllers
@@ -27,16 +28,15 @@ namespace ReactMeals_WebApi.Controllers
         //GET api/Dishes/GetDish/id
         //public method
         [HttpGet("GetDish/{id:int}")]
-        public async Task<ActionResult<Dish>> GetDish(long id)
+        public async Task<ActionResult<Dish>> GetDish(int id)
         {
-
             Dish? foundDish = await (from x in _mainDbContext.Dishes where x.DishId == id select x).FirstOrDefaultAsync();
             if (foundDish is null)
             {
-                _logger.LogError("Could not find dish with ID {0}", id);
+                _logger.LogError("GetDish: Could not find dish with ID {0}", id);
                 return NotFound();
             }
-            _logger.LogInformation("Found dish with ID {0}", id);
+            _logger.LogInformation("GetDish: Found dish with ID {0}", id);
             return Ok(foundDish);
 
         }
@@ -49,10 +49,10 @@ namespace ReactMeals_WebApi.Controllers
             List<Dish> foundDishes = await _mainDbContext.Dishes.ToListAsync();
             if (foundDishes is null || foundDishes.Count == 0)
             {
-                _logger.LogError("Could not find dishes");
+                _logger.LogError("GetDishes: Could not find any dishes");
                 return NotFound();
             }
-            _logger.LogInformation("Returned all dishes. Length: {0}", foundDishes.Count);
+            _logger.LogInformation("GetDishes: Returned all dishes. Length: {0}", foundDishes.Count);
             return Ok(foundDishes);
         }
 
@@ -73,6 +73,7 @@ namespace ReactMeals_WebApi.Controllers
                 .ToListAsync();
             if (foundInDb != null && foundInDb.Count > 0)
             {
+                _logger.LogError("AddDish: Dish already exists");
                 return StatusCode(409, "Dish Already Exists");
             }
             //get the base64 dish image data
@@ -81,6 +82,7 @@ namespace ReactMeals_WebApi.Controllers
             string? extension = _imageValidationService.IsValidImageMagicBytes(imageBytes);
             if (extension == null)
             {
+                _logger.LogError("AddDish: Invalid image data");
                 return BadRequest("Invalid Image Data");
             }
 
@@ -104,7 +106,8 @@ namespace ReactMeals_WebApi.Controllers
             // Write image data to the static assets folder
             System.IO.File.WriteAllBytes(filePath, imageBytes);
 
-            return Ok(newDishToAdd);
+            //return the new dishId
+            return Ok(newDishToAdd.DishId);
         }
 
 
@@ -112,10 +115,45 @@ namespace ReactMeals_WebApi.Controllers
         //only for Admins, to edit a dish
         [Authorize(AuthenticationSchemes = "Default", Policy = "AdminPolicy")]
         [HttpPut("UpdateDish")]
-        public async Task<ActionResult<Dish>> UpdateDish([FromBody] Dish newDish)
+        public async Task<ActionResult<Dish>> UpdateDish([FromBody] AddDishDTOWithId newDish)
         {
+            bool alreadyExists = await _mainDbContext.Dishes.Where(x => x.DishId == newDish.DishId).AnyAsync();
+            //search in db and put the new values in db (if it does not exist -> 404)
+            if (!alreadyExists)
+            {
+                _logger.LogError("UpdateDish: Dish With ID: " + newDish.DishId + " Not Found");
+                return NotFound("Dish With ID: " + newDish.DishId + " Not Found");
+            }
 
-            //todo, search in db and put the new values in db (if it does not exist -> 404)
+            //get the base64 dish image data
+            byte[] imageBytes = Convert.FromBase64String(newDish.Dish_image_base64);
+            //some very basic validation (magic bytes)
+            string? extension = _imageValidationService.IsValidImageMagicBytes(imageBytes);
+            if (extension == null)
+            {
+                _logger.LogError("UpdateDish: Invalid Image Data");
+                return BadRequest("Invalid Image Data");
+            }
+
+            string imageFileName = newDish.Dish_name.Trim().Replace(' ', '_').ToLower() + "." + extension;
+            Dish newDishToAdd = new Dish
+            {
+                DishId = newDish.DishId, //set the ID so that update will work (else it will insert new row)
+                Dish_name = newDish.Dish_name,
+                Dish_description = newDish.Dish_description,
+                Dish_extended_info = newDish.Dish_extended_info,
+                Price = newDish.Price,
+                Dish_url = imageFileName
+            };
+
+            _mainDbContext.Dishes.Update(newDishToAdd);
+            await _mainDbContext.SaveChangesAsync();
+
+            //if all OK, put the image into "Images" static files folder
+            string filePath = @"Images\" + imageFileName;
+            // Write image data to the static assets folder
+            System.IO.File.WriteAllBytes(filePath, imageBytes);
+
             return Ok();
         }
 
@@ -124,12 +162,29 @@ namespace ReactMeals_WebApi.Controllers
         //only for Admins, to delete a dish
         [Authorize(AuthenticationSchemes = "Default", Policy = "AdminPolicy")]
         [HttpDelete("DeleteDish/{id:int}")]
-        public async Task<ActionResult<Dish>> DeleteDish(long id)
+        public async Task<ActionResult<Dish>> DeleteDish(int id)
         {
-            //check if user is admin (role)
-            //
+            Dish? dishFromDb = await _mainDbContext.Dishes.Where(x => x.DishId == id).FirstOrDefaultAsync();
+            if (dishFromDb == null)
+            {
+                _logger.LogError("DeleteDish: Dish With ID: " + id + " Not Found");
+                return NotFound("Dish With ID: " + id + " Not Found");
+            }
+            string imageFileName = dishFromDb.Dish_url;
 
-            //todo, search in db (if exists -> return 404 not found dish to delete)
+            //if found, remove it from db
+            _mainDbContext.Dishes.Remove(dishFromDb);
+            await _mainDbContext.SaveChangesAsync();
+
+            //remove static image
+            try
+            {
+                System.IO.File.Delete(@"Images\" + imageFileName);
+            } catch (Exception ex)
+            {
+                //it's ok, not something serious
+                _logger.LogError("DeleteDish: Could not remove static dish image");
+            }
             return Ok();
         }
 
@@ -140,25 +195,20 @@ namespace ReactMeals_WebApi.Controllers
         [Authorize(AuthenticationSchemes = "Default")]
         public async Task<ActionResult<Order>> CreateOrder([FromBody] OrderDTO webOrder)
         {
-
-            Console.WriteLine("ORDER RECEIVED!");
+            Console.WriteLine("Order received");
 
             if (webOrder is null || webOrder.order is null || webOrder.UserId is null || webOrder.order.Count == 0)
             {
                 //wrong input data, something bad happened on CLIENT side -> 400
+                _logger.LogError("Order: Wrong Order Data");
                 return BadRequest();
             }
             List<Dish> dishList = await _mainDbContext.Dishes.ToListAsync();
-            if (dishList is null)
+            if (dishList is null || dishList.Count == 0)
             {
                 //something bad happened on OUR side -> 500
-                return Problem();
-            }
-
-            if (dishList.Count == 0)
-            {
-                //404
-                return NotFound("At least one Dish ID does not exist!");
+                _logger.LogError("Order: NO dishes found!");
+                return Problem("Internal Error");
             }
 
             decimal cost = 0.0m;
@@ -180,9 +230,10 @@ namespace ReactMeals_WebApi.Controllers
                 if (!idExistsInDb)
                 {
                     //404
+                    _logger.LogError("Order: At least one Order Dish ID does not exist in DB");
                     return NotFound("At least one Dish ID does not exist!");
                 }
-                Console.WriteLine("Dish Id: {0}, Dish NAME: {1}, Dish Counter: {2}", item.DishId, dishName, item.Dish_counter);
+                _logger.LogInformation("Dish Id: {0}, Dish NAME: {1}, Dish Counter: {2}", item.DishId, dishName, item.Dish_counter);
             }
 
             Order orderToInsert = OrderDTOMapping.DTOtoEntity(webOrder);
@@ -202,6 +253,7 @@ namespace ReactMeals_WebApi.Controllers
             //check the user id of the token versus the one received from the web
             if (!User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value.Equals(userId))
             {
+                _logger.LogError("GetUserOrders: Unauthorized User with userId: "+userId);
                 return Unauthorized();
             }
             //search the OrderItem table to see if this user has any orders
