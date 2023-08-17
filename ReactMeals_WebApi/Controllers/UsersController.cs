@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ReactMeals_WebApi.Contexts;
-using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
 
 namespace ReactMeals_WebApi.Controllers
@@ -44,11 +43,9 @@ namespace ReactMeals_WebApi.Controllers
         [HttpPut("UpdateUser")]
         public async Task<ActionResult<User>> UpdateUser([FromBody] User newUser)
         {
-            //check if user is admin (role)
-            //
 
-            //todo, search in db and put the new values in db (if it does not exist -> 404)
-            return Ok();
+            //todo!!
+            return Problem();
         }
 
 
@@ -58,11 +55,8 @@ namespace ReactMeals_WebApi.Controllers
         [HttpDelete("DeleteUser/{userId}")]
         public async Task<ActionResult<User>> DeleteUser(string userId)
         {
-            //check if user is admin (role)
-            //
-
-            //todo, search in db (if exists -> return 404 not found user to delete)
-            return Ok();
+            //todo
+            return Problem();
         }
 
     }

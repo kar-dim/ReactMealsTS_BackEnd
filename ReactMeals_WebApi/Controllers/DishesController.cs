@@ -6,7 +6,6 @@ using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
 using ReactMeals_WebApi.Services;
 using System.Security.Claims;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using Order = ReactMeals_WebApi.Models.Order;
 
 namespace ReactMeals_WebApi.Controllers
@@ -117,13 +116,17 @@ namespace ReactMeals_WebApi.Controllers
         [HttpPut("UpdateDish")]
         public async Task<ActionResult<Dish>> UpdateDish([FromBody] AddDishDTOWithId newDish)
         {
-            bool alreadyExists = await _mainDbContext.Dishes.Where(x => x.DishId == newDish.DishId).AnyAsync();
-            //search in db and put the new values in db (if it does not exist -> 404)
-            if (!alreadyExists)
+            //don't track this, it is used for "reading" only
+            Dish? dishFromDb = await _mainDbContext.Dishes.AsNoTracking().Where(x => x.DishId == newDish.DishId).FirstOrDefaultAsync();
+            //if it does not exist -> 404)
+            if (dishFromDb == null)
             {
                 _logger.LogError("UpdateDish: Dish With ID: " + newDish.DishId + " Not Found");
                 return NotFound("Dish With ID: " + newDish.DishId + " Not Found");
             }
+            //get old image url file
+            string oldImageFileName = dishFromDb.Dish_url;
+            dishFromDb = null;
 
             //get the base64 dish image data
             byte[] imageBytes = Convert.FromBase64String(newDish.Dish_image_base64);
@@ -149,10 +152,21 @@ namespace ReactMeals_WebApi.Controllers
             _mainDbContext.Dishes.Update(newDishToAdd);
             await _mainDbContext.SaveChangesAsync();
 
-            //if all OK, put the image into "Images" static files folder
-            string filePath = @"Images\" + imageFileName;
-            // Write image data to the static assets folder
-            System.IO.File.WriteAllBytes(filePath, imageBytes);
+            //if all OK, handle static images
+            string oldfilePath = @"Images\" + oldImageFileName;
+            string newfilePath = @"Images\" + imageFileName;
+            try
+            {
+                //remove OLD static image
+                System.IO.File.Delete(oldfilePath);
+                //put the new image into "Images" static files folder
+                System.IO.File.WriteAllBytes(newfilePath, imageBytes);
+            }
+            catch (Exception ex)
+            {
+                //it's ok, not something serious
+                _logger.LogError("UpdateDish: Could not remove/update static dish image");
+            }
 
             return Ok();
         }
