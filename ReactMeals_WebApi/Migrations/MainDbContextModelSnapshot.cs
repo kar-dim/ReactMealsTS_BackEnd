@@ -100,6 +100,30 @@ namespace ReactMeals_WebApi.Migrations
                     b.ToTable("OrderItems");
                 });
 
+            modelBuilder.Entity("ReactMeals_WebApi.Models.Token", b =>
+                {
+                    b.Property<int>("TokenId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TokenId"));
+
+                    b.Property<DateTime>("ExpiryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TokenType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TokenValue")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("TokenId");
+
+                    b.ToTable("Tokens");
+                });
+
             modelBuilder.Entity("ReactMeals_WebApi.Models.User", b =>
                 {
                     b.Property<string>("User_Id")
