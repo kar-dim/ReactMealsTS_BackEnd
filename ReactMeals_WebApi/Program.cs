@@ -67,7 +67,9 @@ builder.Services.AddSingleton<IImageValidationService, ImageValidationService>()
 //ngrok
 if (builder.Environment.IsDevelopment())
     builder.Services.AddHostedService<NgrokTunnelService>();
-
+//Auth0 Management API JWT Token Renewal Service
+builder.Services.AddScoped<JwtService>(); // Add this line to register JwtService
+builder.Services.AddHostedService<JwtValidationAndRenewalService>();
 
 var app = builder.Build();
 

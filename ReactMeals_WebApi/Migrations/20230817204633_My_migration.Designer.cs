@@ -12,8 +12,8 @@ using ReactMeals_WebApi.Contexts;
 namespace ReactMeals_WebApi.Migrations
 {
     [DbContext(typeof(MainDbContext))]
-    [Migration("20230811075808_migrate")]
-    partial class migrate
+    [Migration("20230817204633_My_migration")]
+    partial class My_migration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -101,6 +101,30 @@ namespace ReactMeals_WebApi.Migrations
                     b.HasIndex("OrderId");
 
                     b.ToTable("OrderItems");
+                });
+
+            modelBuilder.Entity("ReactMeals_WebApi.Models.Token", b =>
+                {
+                    b.Property<int>("TokenId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TokenId"));
+
+                    b.Property<DateTime>("ExpiryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TokenType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TokenValue")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("TokenId");
+
+                    b.ToTable("Tokens");
                 });
 
             modelBuilder.Entity("ReactMeals_WebApi.Models.User", b =>
