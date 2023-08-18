@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using ReactMeals_WebApi.Contexts;
+using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
 using RestSharp;
 using System.Net;
@@ -9,38 +10,6 @@ using System.Text.Json;
 
 namespace ReactMeals_WebApi.Controllers
 {
-    //User data (in JSON) returned by the Auth0 management API
-    public class UserIdentity
-    {
-        public string user_id { get; set; }
-        public string provider { get; set; }
-        public string connection { get; set; }
-        public bool isSocial { get; set; }
-    }
-
-    public class UserMetadata
-    {
-        public string name { get; set; }
-        public string last_name { get; set; }
-        public string address { get; set; }
-    }
-
-    public class Auth0User
-    {
-        public DateTime created_at { get; set; }
-        public string email { get; set; }
-        public bool email_verified { get; set; }
-        public List<UserIdentity> identities { get; set; }
-        public string name { get; set; }
-        public string nickname { get; set; }
-        public string picture { get; set; }
-        public DateTime updated_at { get; set; }
-        public string user_id { get; set; }
-        public UserMetadata user_metadata { get; set; }
-        public DateTime last_login { get; set; }
-        public string last_ip { get; set; }
-        public int logins_count { get; set; }
-    }
 
     [Route("api/[controller]")]
     [ApiController]
@@ -83,19 +52,19 @@ namespace ReactMeals_WebApi.Controllers
             var response = await client.ExecuteAsync(request);
             if (response == null || response.StatusCode != HttpStatusCode.OK || response.Content.IsNullOrEmpty())
             {
-                _logger.LogCritical(_className + "Error in getting users info from api/v2/users");
+                _logger.LogError(_className + "Error in getting users info from api/v2/users");
                 return Problem("INTERNAL ERROR");
             }
 
-            List<Auth0User> users = JsonSerializer.Deserialize<List<Auth0User>>(response.Content);
+            List<Auth0UserDeserialize> users = JsonSerializer.Deserialize<List<Auth0UserDeserialize>>(response.Content);
             List<User> usersToReturn = new List<User>();
             if (users == null || users.Count == 0)
             {
-                _logger.LogCritical(_className + "Users returned are malformed! Check Auth0 configuration");
+                _logger.LogError(_className + "Users returned are malformed! Check Auth0 configuration");
                 return Problem("INTERNAL ERROR");
             }
 
-            foreach (Auth0User user in users)
+            foreach (Auth0UserDeserialize user in users)
             {
                 //only send users that have defined values (else skip them entirely)
                 if (!(user == null || user.email.IsNullOrEmpty() || user.user_id.IsNullOrEmpty() || user.user_metadata.name.IsNullOrEmpty() || user.user_metadata.last_name.IsNullOrEmpty() || user.user_metadata.address.IsNullOrEmpty()))
@@ -149,10 +118,31 @@ namespace ReactMeals_WebApi.Controllers
                 return Problem("Internal Problem");
             }
 
-            //todo!!
-            //send the request to auth0
+            //send the request to auth0 (HTTP PATCH) to update specific user data only
+            RestClient client = new RestClient("https://" + _configuration["Auth0:M2M_Domain"]);
+            RestRequest request = new RestRequest("api/v2/users/" + newUser.User_Id, Method.Patch);
+            request.AddHeader("Authorization", $"Bearer {mApiToken}");
+            request.AddHeader("Content-Type", "application/json");
+            request.AddHeader("Accept", "application/json");
+            string userJsonSerialize = JsonSerializer.Serialize(new Auth0UserSerialize
+            {
+                email = newUser.Email,
+                user_metadata = new UserMetadata
+                {
+                    name = newUser.Name,
+                    last_name = newUser.LastName,
+                    address = newUser.Address
+                }
+            });
+            request.AddParameter("application/json", userJsonSerialize, ParameterType.RequestBody);
+            var response = await client.ExecuteAsync(request);
+            if (response == null || response.StatusCode != HttpStatusCode.OK || response.Content.IsNullOrEmpty())
+            {
+                _logger.LogError(_className + "Error in patching user from api/v2/users");
+                return Problem("INTERNAL ERROR");
+            }
 
-            return Problem("NOT IMPLEMENTED");
+            return Ok();
         }
 
 
@@ -170,12 +160,20 @@ namespace ReactMeals_WebApi.Controllers
                 return Problem("Internal Problem");
             }
 
-            //todo!!
-            //send the request to auth0 so that the User will be deleted from Auth0 servers
-
-            //we can delete the user's orders from ouw own db (Order, OrderItem tables)
+            //send the request to auth0 (HTTP DELETE) so that the User will be deleted from Auth0 servers
+            RestClient client = new RestClient("https://" + _configuration["Auth0:M2M_Domain"]);
+            RestRequest request = new RestRequest("api/v2/users/" + userId, Method.Delete);
+            request.AddHeader("Authorization", $"Bearer {mApiToken}");
+            var response = await client.ExecuteAsync(request);
+            //DELETE OK status is 204
+            if (response == null || response.StatusCode != HttpStatusCode.NoContent)
+            {
+                _logger.LogError(_className + "Error in deleting user from api/v2/users");
+                return Problem("INTERNAL ERROR");
+            }
+            //we can delete the user's orders from our own db (Order, OrderItem tables)
             //but let's keep them for "archival/proof" reasons
-            return Problem("NOT IMPLEMENTED");
+            return Ok();
         }
 
     }
