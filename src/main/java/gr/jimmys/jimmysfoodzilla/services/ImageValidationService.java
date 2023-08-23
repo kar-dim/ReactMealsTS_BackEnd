@@ -1,0 +1,32 @@
+package gr.jimmys.jimmysfoodzilla.services;
+
+import org.springframework.context.annotation.Scope;
+import org.springframework.context.annotation.ScopedProxyMode;
+import org.springframework.stereotype.Component;
+import org.springframework.web.context.WebApplicationContext;
+
+import javax.xml.crypto.dsig.keyinfo.KeyValue;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
+@Component
+@Scope(value = WebApplicationContext.SCOPE_REQUEST, proxyMode = ScopedProxyMode.TARGET_CLASS)
+public class ImageValidationService {
+    private static final HashMap<int[], String> knownMagicBytes;
+    static {
+        knownMagicBytes = new HashMap<>();
+        knownMagicBytes.put(new int[] { 0xFF, 0xD8, 0xFF }, "jpg");
+        knownMagicBytes.put(new int[] { 0x89, 0x50, 0x4E, 0x47 }, "png");
+        knownMagicBytes.put(new int[] { 0x47, 0x49, 0x46, 0x38 }, "gif");
+        knownMagicBytes.put(new int[] { 0x42, 0x4D }, "gif");
+    }
+
+    public String IsValidImageMagicBytes (int[] imageData) {
+        for (Map.Entry<int[], String> entry : knownMagicBytes.entrySet()) {
+            if (Arrays.compare(entry.getKey(), 0, entry.getKey().length, imageData, 0, entry.getKey().length) == 0)
+                return entry.getValue();
+        }
+        return null;
+    }
+}
