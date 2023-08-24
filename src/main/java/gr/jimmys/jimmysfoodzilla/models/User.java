@@ -13,12 +13,12 @@ public class User {
 
     }
 
-    public String getUser_Id() {
-        return User_Id;
+    public String getUser_id() {
+        return user_id;
     }
 
-    public void setUser_Id(String user_Id) {
-        this.User_Id = user_Id;
+    public void setUser_id(String user_id) {
+        this.user_id = user_id;
     }
 
     public String getEmail() {
@@ -54,11 +54,11 @@ public class User {
     }
 
     public User(String User_id) {
-        this.User_Id = User_id;
+        this.user_id = User_id;
     }
 
-    public User(String User_Id, String email, String name, String lastName, String address) {
-        this.User_Id = User_Id;
+    public User(String user_id, String email, String name, String lastName, String address) {
+        this.user_id = user_id;
         this.email = email;
         this.name = name;
         this.lastName = lastName;
@@ -67,7 +67,7 @@ public class User {
 
     @Id
     @Column(name = "User_Id")
-    private String User_Id; //"user_id" from auth0
+    private String user_id; //"user_id" from auth0
 
     @Column(name = "Email", columnDefinition = "VARCHAR(MAX)")
     private String email; //"email" from auth0
@@ -83,6 +83,6 @@ public class User {
     @Override
     public String toString()
     {
-        return "User ID " + User_Id + " email: " + email + " Name: " + name + " Last Name: " + lastName + " Address: " + address + "\n";
+        return "User ID " + user_id + " email: " + email + " Name: " + name + " Last Name: " + lastName + " Address: " + address + "\n";
     }
 }

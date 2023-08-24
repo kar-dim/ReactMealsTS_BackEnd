@@ -1,5 +1,6 @@
 package gr.jimmys.jimmysfoodzilla.services;
 
+import com.nimbusds.jose.jwk.JWKSet;
 import gr.jimmys.jimmysfoodzilla.controllers.DishController;
 import gr.jimmys.jimmysfoodzilla.models.Token;
 import gr.jimmys.jimmysfoodzilla.repository.TokenRepository;
@@ -14,16 +15,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 public class JwtValidationAndRenewalService {
-    private TokenRepository tokenRepository;
+    private final TokenRepository tokenRepository;
     private String managementApiAccessTokenValue;
-    private Thread jwtValidationAndRenewalThread;
-
     @Value("${auth0.domain}")
     private String auth0_domain;
 
@@ -32,6 +32,16 @@ public class JwtValidationAndRenewalService {
 
     @Value("${auth0.m2m_clientsecret}")
     private String auth0_m2m_clientsecret;
+
+    public synchronized JWKSet getJwkSet() {
+        return jwkSet;
+    }
+
+    public synchronized void setJwkSet(JWKSet jwkSet) {
+        this.jwkSet = jwkSet;
+    }
+
+    private JWKSet jwkSet; //used on "CreateUser" controller
     private final Logger logger = LoggerFactory.getLogger(DishController.class);
     private Tuple3<Boolean, LocalDateTime, String> isTokenExpired() {
         List<Token> tokenFromDb = tokenRepository.findAllManagementApiTokens("M_API");
@@ -93,10 +103,19 @@ public class JwtValidationAndRenewalService {
 
     public JwtValidationAndRenewalService(TokenRepository tokenRepository) {
         this.tokenRepository = tokenRepository;
-        managementApiAccessTokenValue = "";
-        jwtValidationAndRenewalThread = new Thread( () -> {
+        setManagementApiAccessTokenValue("");
+
+        Thread jwtValidationAndRenewalThread = new Thread(() -> {
             logger.info("JwtValidationAndRenewalService: START Service");
-            while(true) {
+            try {
+                Thread.sleep(5000); //wait so intiialization happens
+                setJwkSet(JWKSet.load(new URI("https://" + auth0_domain+ "/.well-known/jwks.json").toURL()));
+                logger.info("JwtValidationAndRenewalService: RENEWED jwks.json");
+            } catch (Exception e) {
+                logger.error("JwtValidationAndRenewalService: COULD NOT RENEW jwks.json");
+                setJwkSet(null);
+            }
+            while (true) {
                 try {
                     Tuple3<Boolean, LocalDateTime, String> tokenExpiredValues = isTokenExpired();
                     //check if token is expired
@@ -109,7 +128,7 @@ public class JwtValidationAndRenewalService {
                         } else {
                             //calculate the time to sleep (minus 30 seconds)
                             LocalDateTime tokenExpiration = renewTokenValues.getFirst();
-                            Duration sleepTime = Duration.between( LocalDateTime.now(), tokenExpiration.minusSeconds(30));
+                            Duration sleepTime = Duration.between(LocalDateTime.now(), tokenExpiration.minusSeconds(30));
                             setManagementApiAccessTokenValue(renewTokenValues.getThird());
                             //sleep util it's time to renew the token (plus some seconds)
                             Thread.sleep(sleepTime.toMillis());

@@ -1,31 +1,33 @@
 package gr.jimmys.jimmysfoodzilla.controllers;
 
-import com.google.gson.JsonArray;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jwt.SignedJWT;
 import gr.jimmys.jimmysfoodzilla.DTO.Auth0UserSerialize;
 import gr.jimmys.jimmysfoodzilla.DTO.UserMetadata;
-import gr.jimmys.jimmysfoodzilla.models.Dish;
 import gr.jimmys.jimmysfoodzilla.models.User;
 import gr.jimmys.jimmysfoodzilla.repository.UserRepository;
 import gr.jimmys.jimmysfoodzilla.services.JwtValidationAndRenewalService;
-import gr.jimmys.jimmysfoodzilla.utils.Tuple3;
 import kong.unirest.*;
 import kong.unirest.json.JSONArray;
 import kong.unirest.json.JSONException;
 import kong.unirest.json.JSONObject;
-import org.apache.coyote.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.repository.query.Param;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,6 +43,8 @@ public class UserController {
     @Value("${auth0.domain}")
     private String auth0_domain;
 
+    @Value("${auth0.m2maudience}")
+    private String auth0_m2maudience;
     @Autowired
     UserRepository userRepository;
 
@@ -93,6 +97,47 @@ public class UserController {
 
     }
 
+    @PostMapping("/CreateUser")
+    public ResponseEntity<User> createUser(@RequestHeader(HttpHeaders.AUTHORIZATION) String token, @RequestBody User userToCreate) {
+        if (token == null || !token.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        try {
+            // Extract the JWT token
+            SignedJWT signedJWT = SignedJWT.parse(token.substring(7)); //skip "Bearer " prefix
+            // Fetch the JWKS URL (cached)
+            JWKSet jwkSet = jwtValidationAndRenewalService.getJwkSet();
+            if (jwkSet == null) //internal problem...
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            // Retrieve the JWK with a matching key ID (kid)
+            JWK jwk = jwkSet.getKeyByKeyId(signedJWT.getHeader().getKeyID());
+            if (jwk == null)  //internal problem...
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            // Verify the JWT signature using the public key
+            JWSVerifier verifier = new RSASSAVerifier(jwk.toRSAKey());
+            if (!signedJWT.verify(verifier))
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); //cannot verify, let's return FORBIDDEN
+            // Check the 'aud' claim
+            List<String> audience = signedJWT.getJWTClaimsSet().getAudience();
+            if (audience == null || !audience.contains(auth0_m2maudience))
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+
+        } catch (ParseException | JOSEException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        //JWT checks passed, insert the user to DB
+        logger.info("UserController: New User Created [Sent from Auth0]: " + userToCreate.toString());
+        boolean exists = userRepository.existsById(userToCreate.getUser_id());
+        if (exists)
+        {
+            logger.error("UserController: Error: User already exists");
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "User Already Exists!");
+        }
+        //else, add the user
+        userRepository.save(userToCreate);
+        return new ResponseEntity<>(userToCreate, HttpStatus.OK);
+    }
+
     @PutMapping("/UpdateUser")
     public ResponseEntity<Void> updateUser(@RequestBody User user) {
         String mApiToken = jwtValidationAndRenewalService.getManagementApiAccessTokenValue();
@@ -104,14 +149,14 @@ public class UserController {
 
         try {
             Auth0UserSerialize auth0UserToSend = new Auth0UserSerialize(user.getEmail(), new UserMetadata(user.getName(), user.getLastName(), user.getAddress()));
-            HttpResponse<Empty> response = Unirest.patch("https://" + auth0_domain + "/api/v2/users/" + URLEncoder.encode(user.getUser_Id(), StandardCharsets.UTF_8))
+            HttpResponse<Empty> response = Unirest.patch("https://" + auth0_domain + "/api/v2/users/" + URLEncoder.encode(user.getUser_id(), StandardCharsets.UTF_8))
                     .header("Authorization", "Bearer " + mApiToken)
                     .header("Content-type", "application/json")
                     .header("Accept", "application/json")
                     .body(auth0UserToSend)
                     .asEmpty();
             if (response.getStatus() != 200) {
-                logger.error("UserController: Error in ManagementAPI api/v2/users/" + user.getUser_Id() + " HTTP PATCH request, could not patch user\n" +
+                logger.error("UserController: Error in ManagementAPI api/v2/users/" + user.getUser_id() + " HTTP PATCH request, could not patch user\n" +
                         "Reason: STATUS CODE: " + response.getStatus() + " STATUS TEXT: " + response.getStatusText());
                 return ResponseEntity.internalServerError().build();
             }
