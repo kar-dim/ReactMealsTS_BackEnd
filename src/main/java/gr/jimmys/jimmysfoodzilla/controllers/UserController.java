@@ -20,7 +20,7 @@ import java.util.List;
 @RequestMapping("/api/Users")
 public class UserController {
 
-    Logger logger = LoggerFactory.getLogger(UserController.class);
+    private final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     @Autowired
     UserRepository userRepository;

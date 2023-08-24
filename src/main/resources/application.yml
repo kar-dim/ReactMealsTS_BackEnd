@@ -1,0 +1,9 @@
+auth0:
+  audience: https://jimmys/api
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://dev-f0vakdckhtwh0dl8.us.auth0.com/
+          audiences: https://jimmys/api

@@ -3,6 +3,7 @@ package gr.jimmys.jimmysfoodzilla.models;
 import jakarta.persistence.*;
 
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "Tokens")
@@ -22,8 +23,8 @@ public class Token {
     @Column(name = "TokenType", columnDefinition = "VARCHAR(MAX)")
     private String tokenType;
     @Column(name = "ExpiryDate")
-    private Timestamp expiryDate;
-    public Token(String tokenValue, String tokenType, Timestamp expiryDate) {
+    private LocalDateTime expiryDate;
+    public Token(String tokenValue, String tokenType, LocalDateTime expiryDate) {
         this.tokenValue = tokenValue;
         this.tokenType = tokenType;
         this.expiryDate = expiryDate;
@@ -53,11 +54,11 @@ public class Token {
         this.tokenType = tokenType;
     }
 
-    public Timestamp getExpiryDate() {
+    public LocalDateTime getExpiryDate() {
         return expiryDate;
     }
 
-    public void setExpiryDate(Timestamp expiryDate) {
+    public void setExpiryDate(LocalDateTime expiryDate) {
         this.expiryDate = expiryDate;
     }
 

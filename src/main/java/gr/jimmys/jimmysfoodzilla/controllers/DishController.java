@@ -37,7 +37,7 @@ import java.util.Optional;
 @RequestMapping("/api/Dishes")
 public class DishController {
 
-    Logger logger = LoggerFactory.getLogger(DishController.class);
+    private final Logger logger = LoggerFactory.getLogger(DishController.class);
     @Autowired
     DishRepository dishRepository;
     @Autowired
