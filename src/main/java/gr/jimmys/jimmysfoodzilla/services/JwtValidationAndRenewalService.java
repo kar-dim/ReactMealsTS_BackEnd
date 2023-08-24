@@ -110,7 +110,7 @@ public class JwtValidationAndRenewalService {
                             //calculate the time to sleep (minus 30 seconds)
                             LocalDateTime tokenExpiration = renewTokenValues.getFirst();
                             Duration sleepTime = Duration.between( LocalDateTime.now(), tokenExpiration.minusSeconds(30));
-                            managementApiAccessTokenValue = renewToken().getThird();
+                            setManagementApiAccessTokenValue(renewTokenValues.getThird());
                             //sleep util it's time to renew the token (plus some seconds)
                             Thread.sleep(sleepTime.toMillis());
                         }
@@ -118,7 +118,7 @@ public class JwtValidationAndRenewalService {
                     //not expired
                     else {
                         //the token is still valid
-                        managementApiAccessTokenValue = tokenExpiredValues.getThird();
+                        setManagementApiAccessTokenValue(tokenExpiredValues.getThird());
                         Duration sleepTime = Duration.between(LocalDateTime.now(), tokenExpiredValues.getSecond().minusSeconds(30));
                         if (!sleepTime.isNegative() && !sleepTime.isZero())
                             Thread.sleep(sleepTime.toMillis());
@@ -133,5 +133,8 @@ public class JwtValidationAndRenewalService {
 
     public synchronized String getManagementApiAccessTokenValue() {
         return managementApiAccessTokenValue;
+    }
+    public synchronized void setManagementApiAccessTokenValue(String value) {
+        this.managementApiAccessTokenValue = value;
     }
 }
