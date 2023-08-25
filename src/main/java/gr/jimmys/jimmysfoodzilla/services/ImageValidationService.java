@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Component
-@Scope(value = WebApplicationContext.SCOPE_REQUEST, proxyMode = ScopedProxyMode.TARGET_CLASS)
 public class ImageValidationService {
     private static final HashMap<int[], String> knownMagicBytes;
     static {

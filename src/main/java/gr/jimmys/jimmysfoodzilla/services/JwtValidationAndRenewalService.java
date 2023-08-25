@@ -42,7 +42,7 @@ public class JwtValidationAndRenewalService {
     }
 
     private JWKSet jwkSet; //used on "CreateUser" controller
-    private final Logger logger = LoggerFactory.getLogger(DishController.class);
+    private final Logger logger = LoggerFactory.getLogger(JwtValidationAndRenewalService.class);
     private Tuple3<Boolean, LocalDateTime, String> isTokenExpired() {
         List<Token> tokenFromDb = tokenRepository.findAllManagementApiTokens("M_API");
         if (tokenFromDb.size() == 0) {
