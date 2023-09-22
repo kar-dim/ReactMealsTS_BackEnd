@@ -55,8 +55,8 @@ namespace ReactMeals_WebApi.Controllers
         [HttpGet("GetDishes")]
         public async Task<ActionResult<IEnumerable<Dish>>> GetDishes()
         {
-            List<Dish>? foundDishes = _dishesCacheService.GetDishes();
-            if (foundDishes is null || foundDishes.Count == 0)
+            List<Dish> foundDishes = _dishesCacheService.GetDishes();
+            if (foundDishes.Count == 0)
             {
                 _logger.LogError("GetDishes: Could not find any dishes");
                 return NotFound();
