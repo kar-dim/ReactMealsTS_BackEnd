@@ -71,6 +71,9 @@ if (builder.Environment.IsDevelopment())
 builder.Services.AddScoped<JwtService>(); // Add this line to register JwtService
 builder.Services.AddSingleton<JwtValidationAndRenewalService>();
 builder.Services.AddHostedService<JwtValidationAndRenewalService>(provider => provider.GetService<JwtValidationAndRenewalService>());
+//in memory dishes service
+builder.Services.AddSingleton<DishesCacheService>();
+builder.Services.AddHostedService<DishesCacheService>(provider => provider.GetService<DishesCacheService>());
 
 var app = builder.Build();
 

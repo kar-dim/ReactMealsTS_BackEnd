@@ -17,11 +17,13 @@ namespace ReactMeals_WebApi.Controllers
         private readonly ILogger<DishesController> _logger;
         private readonly MainDbContext _mainDbContext;
         private readonly IImageValidationService _imageValidationService;
-        public DishesController(ILogger<DishesController> logger, IImageValidationService imageValidationService, MainDbContext ordersDbContext)
+        private readonly DishesCacheService _dishesCacheService;
+        public DishesController(ILogger<DishesController> logger, IImageValidationService imageValidationService, MainDbContext ordersDbContext, DishesCacheService dishesCacheService)
         {
             _mainDbContext = ordersDbContext;
             _imageValidationService = imageValidationService;
             _logger = logger;
+            _dishesCacheService = dishesCacheService;
         }
 
         //GET api/Dishes/GetDish/id
@@ -29,12 +31,20 @@ namespace ReactMeals_WebApi.Controllers
         [HttpGet("GetDish/{id:int}")]
         public async Task<ActionResult<Dish>> GetDish(int id)
         {
+            Dish? foundDish = _dishesCacheService.GetDish(id);
+            if (foundDish == null)
+            {
+                _logger.LogError("GetDish: Could not find dish with ID {0}", id);
+                return NotFound();
+            }
+            /*
             Dish? foundDish = await (from x in _mainDbContext.Dishes where x.DishId == id select x).FirstOrDefaultAsync();
             if (foundDish is null)
             {
                 _logger.LogError("GetDish: Could not find dish with ID {0}", id);
                 return NotFound();
             }
+            */
             _logger.LogInformation("GetDish: Found dish with ID {0}", id);
             return Ok(foundDish);
 
@@ -45,12 +55,20 @@ namespace ReactMeals_WebApi.Controllers
         [HttpGet("GetDishes")]
         public async Task<ActionResult<IEnumerable<Dish>>> GetDishes()
         {
+            List<Dish>? foundDishes = _dishesCacheService.GetDishes();
+            if (foundDishes is null || foundDishes.Count == 0)
+            {
+                _logger.LogError("GetDishes: Could not find any dishes");
+                return NotFound();
+            }
+            /*
             List<Dish> foundDishes = await _mainDbContext.Dishes.ToListAsync();
             if (foundDishes is null || foundDishes.Count == 0)
             {
                 _logger.LogError("GetDishes: Could not find any dishes");
                 return NotFound();
             }
+            */
             _logger.LogInformation("GetDishes: Returned all dishes. Length: {0}", foundDishes.Count);
             return Ok(foundDishes);
         }
@@ -64,12 +82,20 @@ namespace ReactMeals_WebApi.Controllers
         {
             //search in db(if exists-> return 409 CONFLICT)
             //we don't have the ID yet, search by other parameters
+            /*
             var foundInDb = await _mainDbContext.Dishes
                 .Where(x => x.Dish_name.Equals(newDish.Dish_name))
                 .Where(x => x.Dish_description.Equals(newDish.Dish_description))
                 .Where(x => x.Price.Equals(newDish.Price))
                 .Where(x => x.Dish_extended_info.Equals(newDish.Dish_extended_info))
                 .ToListAsync();
+            */
+            var foundInDb = _dishesCacheService.GetDishes()
+                .Where(x => x.Dish_name.Equals(newDish.Dish_name))
+                .Where(x => x.Dish_description.Equals(newDish.Dish_description))
+                .Where(x => x.Price.Equals(newDish.Price))
+                .Where(x => x.Dish_extended_info.Equals(newDish.Dish_extended_info)).ToList();
+
             if (foundInDb != null && foundInDb.Count > 0)
             {
                 _logger.LogError("AddDish: Dish already exists");
@@ -96,8 +122,10 @@ namespace ReactMeals_WebApi.Controllers
                 Dish_url = imageFileName
             };
 
-            await _mainDbContext.AddAsync(newDishToAdd);
+            //add to cache
+            _dishesCacheService.AddCacheEntry(newDishToAdd);
             //insert to db
+            await _mainDbContext.AddAsync(newDishToAdd);
             await _mainDbContext.SaveChangesAsync();
 
             //if all OK, put the image into "Images" static files folder
@@ -116,17 +144,25 @@ namespace ReactMeals_WebApi.Controllers
         [HttpPut("UpdateDish")]
         public async Task<ActionResult<Dish>> UpdateDish([FromBody] AddDishDTOWithId newDish)
         {
+            Dish? localDish = _dishesCacheService.GetDish(newDish.DishId);
+            if (localDish == null)
+            {
+                _logger.LogError("UpdateDish: Dish With ID: " + newDish.DishId + " Not Found");
+                return NotFound("Dish With ID: " + newDish.DishId + " Not Found");
+            }
+            /*
             //don't track this, it is used for "reading" only
-            Dish? dishFromDb = await _mainDbContext.Dishes.AsNoTracking().Where(x => x.DishId == newDish.DishId).FirstOrDefaultAsync();
+            Dish? localDish = await _mainDbContext.Dishes.AsNoTracking().Where(x => x.DishId == newDish.DishId).FirstOrDefaultAsync();
             //if it does not exist -> 404)
             if (dishFromDb == null)
             {
                 _logger.LogError("UpdateDish: Dish With ID: " + newDish.DishId + " Not Found");
                 return NotFound("Dish With ID: " + newDish.DishId + " Not Found");
             }
+            */
             //get old image url file
-            string oldImageFileName = dishFromDb.Dish_url;
-            dishFromDb = null;
+            string oldImageFileName = localDish.Dish_url;
+            localDish = null;
 
             //get the base64 dish image data
             byte[] imageBytes = Convert.FromBase64String(newDish.Dish_image_base64);
@@ -149,6 +185,9 @@ namespace ReactMeals_WebApi.Controllers
                 Dish_url = imageFileName
             };
 
+            //update cache
+            _dishesCacheService.UpdateCacheEntry(newDishToAdd);
+            //update db
             _mainDbContext.Dishes.Update(newDishToAdd);
             await _mainDbContext.SaveChangesAsync();
 
@@ -178,16 +217,26 @@ namespace ReactMeals_WebApi.Controllers
         [HttpDelete("DeleteDish/{id:int}")]
         public async Task<ActionResult<Dish>> DeleteDish(int id)
         {
-            Dish? dishFromDb = await _mainDbContext.Dishes.Where(x => x.DishId == id).FirstOrDefaultAsync();
-            if (dishFromDb == null)
+            Dish? localDish = _dishesCacheService.GetDish(id);
+            if (localDish == null)
             {
                 _logger.LogError("DeleteDish: Dish With ID: " + id + " Not Found");
                 return NotFound("Dish With ID: " + id + " Not Found");
             }
-            string imageFileName = dishFromDb.Dish_url;
+            /*
+            Dish? localDish = await _mainDbContext.Dishes.Where(x => x.DishId == id).FirstOrDefaultAsync();
+            if (localDish == null)
+            {
+                _logger.LogError("DeleteDish: Dish With ID: " + id + " Not Found");
+                return NotFound("Dish With ID: " + id + " Not Found");
+            }
+            */
+            string imageFileName = localDish.Dish_url;
 
+            //if found, remove from cache
+            _dishesCacheService.DeleteCacheEntry(id);
             //if found, remove it from db
-            _mainDbContext.Dishes.Remove(dishFromDb);
+            _mainDbContext.Dishes.Remove(localDish);
             await _mainDbContext.SaveChangesAsync();
 
             //remove static image
@@ -217,7 +266,7 @@ namespace ReactMeals_WebApi.Controllers
                 _logger.LogError("Order: Wrong Order Data");
                 return BadRequest();
             }
-            List<Dish> dishList = await _mainDbContext.Dishes.ToListAsync();
+            List<Dish>? dishList = _dishesCacheService.GetDishes(); /*await _mainDbContext.Dishes.ToListAsync() */
             if (dishList is null || dishList.Count == 0)
             {
                 //something bad happened on OUR side -> 500
