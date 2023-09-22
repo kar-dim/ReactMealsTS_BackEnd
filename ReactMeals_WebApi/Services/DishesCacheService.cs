@@ -65,7 +65,7 @@ namespace ReactMeals_WebApi.Services
             }
         }
 
-        public List<Dish>? GetDishes()
+        public List<Dish> GetDishes()
         {
             dishesCacheLock.EnterReadLock();
             try
