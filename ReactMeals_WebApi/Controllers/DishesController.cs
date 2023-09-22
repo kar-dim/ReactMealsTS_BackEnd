@@ -83,20 +83,20 @@ namespace ReactMeals_WebApi.Controllers
             //search in db(if exists-> return 409 CONFLICT)
             //we don't have the ID yet, search by other parameters
             /*
-            var foundInDb = await _mainDbContext.Dishes
+            var localDish = await _mainDbContext.Dishes
                 .Where(x => x.Dish_name.Equals(newDish.Dish_name))
                 .Where(x => x.Dish_description.Equals(newDish.Dish_description))
                 .Where(x => x.Price.Equals(newDish.Price))
                 .Where(x => x.Dish_extended_info.Equals(newDish.Dish_extended_info))
                 .ToListAsync();
             */
-            var foundInDb = _dishesCacheService.GetDishes()
+            var localDish = _dishesCacheService.GetDishes()
                 .Where(x => x.Dish_name.Equals(newDish.Dish_name))
                 .Where(x => x.Dish_description.Equals(newDish.Dish_description))
                 .Where(x => x.Price.Equals(newDish.Price))
                 .Where(x => x.Dish_extended_info.Equals(newDish.Dish_extended_info)).ToList();
 
-            if (foundInDb != null && foundInDb.Count > 0)
+            if (localDish != null && localDish.Count > 0)
             {
                 _logger.LogError("AddDish: Dish already exists");
                 return StatusCode(409, "Dish Already Exists");
