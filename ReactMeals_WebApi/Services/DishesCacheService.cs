@@ -3,6 +3,9 @@ using ReactMeals_WebApi.Models;
 
 namespace ReactMeals_WebApi.Services
 {
+    //Service that loads all dishes from db at startup
+    //Each web request that needs to read/write dishes, will access this dish cache instead of going to the db directly
+    //useful for bulk Get requests. After writing into the cache, controllers should immediately persist data into db
     public class DishesCacheService : IHostedService, IDisposable
     {
         private string _className;
