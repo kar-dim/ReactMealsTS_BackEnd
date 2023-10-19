@@ -1,10 +1,10 @@
 package gr.jimmys.jimmysfoodzilla.services;
 
 import com.nimbusds.jose.jwk.JWKSet;
-import gr.jimmys.jimmysfoodzilla.controllers.DishController;
 import gr.jimmys.jimmysfoodzilla.models.Token;
 import gr.jimmys.jimmysfoodzilla.repository.TokenRepository;
 import gr.jimmys.jimmysfoodzilla.utils.Tuple3;
+import jakarta.annotation.PostConstruct;
 import kong.unirest.HttpResponse;
 import kong.unirest.JsonNode;
 import kong.unirest.Unirest;
@@ -12,6 +12,7 @@ import kong.unirest.UnirestException;
 import kong.unirest.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -22,7 +23,8 @@ import java.util.List;
 
 @Service
 public class JwtValidationAndRenewalService {
-    private final TokenRepository tokenRepository;
+    @Autowired
+    private TokenRepository tokenRepository;
     private String managementApiAccessTokenValue;
     @Value("${auth0.domain}")
     private String auth0_domain;
@@ -101,14 +103,16 @@ public class JwtValidationAndRenewalService {
         }
     }
 
-    public JwtValidationAndRenewalService(TokenRepository tokenRepository) {
-        this.tokenRepository = tokenRepository;
+    public JwtValidationAndRenewalService() {
         setManagementApiAccessTokenValue("");
+    }
 
+    @PostConstruct
+    public void init() {
         Thread jwtValidationAndRenewalThread = new Thread(() -> {
             logger.info("JwtValidationAndRenewalService: START Service");
             try {
-                Thread.sleep(5000); //wait so intiialization happens
+                //Thread.sleep(5000); //wait so intiialization happens (not needed when @PostConstruct is used, after constructor)
                 setJwkSet(JWKSet.load(new URI("https://" + auth0_domain+ "/.well-known/jwks.json").toURL()));
                 logger.info("JwtValidationAndRenewalService: RENEWED jwks.json");
             } catch (Exception e) {

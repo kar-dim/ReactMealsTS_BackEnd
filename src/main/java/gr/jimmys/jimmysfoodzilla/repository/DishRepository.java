@@ -20,4 +20,7 @@ public interface DishRepository extends JpaRepository<Dish, Integer> {
             @Param("Dish_description") String dish_description,
             @Param("Price") BigDecimal price,
             @Param("Dish_extended_info") String dish_extended_info);
+
+    @Query("SELECT d FROM Dish d ORDER BY d.DishId ASC")
+    List<Dish> findAllAscendingById();
 }

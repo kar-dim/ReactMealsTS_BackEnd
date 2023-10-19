@@ -1,17 +1,14 @@
 package gr.jimmys.jimmysfoodzilla.controllers;
 
-import gr.jimmys.jimmysfoodzilla.DTO.AddDishDTO;
-import gr.jimmys.jimmysfoodzilla.DTO.AddDishDTOWithId;
-import gr.jimmys.jimmysfoodzilla.DTO.OrderDTO;
-import gr.jimmys.jimmysfoodzilla.DTO.OrderItemDTO;
+import gr.jimmys.jimmysfoodzilla.DTO.*;
 import gr.jimmys.jimmysfoodzilla.models.Dish;
 import gr.jimmys.jimmysfoodzilla.models.Order;
 import gr.jimmys.jimmysfoodzilla.models.User;
 import gr.jimmys.jimmysfoodzilla.repository.DishRepository;
 import gr.jimmys.jimmysfoodzilla.repository.OrderRepository;
 import gr.jimmys.jimmysfoodzilla.repository.UserRepository;
+import gr.jimmys.jimmysfoodzilla.services.DishCacheService;
 import gr.jimmys.jimmysfoodzilla.services.ImageValidationService;
-import org.apache.coyote.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,10 +48,14 @@ public class DishController {
     @Autowired
     ImageValidationService imageValidationService;
 
+    @Autowired
+    DishCacheService dishCacheService;
+
     @GetMapping("/GetDishes")
     public ResponseEntity<List<Dish>> getDishes() {
         try {
-            List<Dish> dishes = new ArrayList<>(dishRepository.findAll());
+            /*List<Dish> dishes = new ArrayList<>(dishRepository.findAll());*/
+            List<Dish> dishes = dishCacheService.getDishes();
             if (dishes.isEmpty()) {
                 logger.error("GetDishes: Could not find any dishes");
                 return ResponseEntity.notFound().build();
@@ -68,11 +69,18 @@ public class DishController {
 
     @GetMapping("/GetDish/{id}")
     public ResponseEntity<Dish> getDish(@PathVariable("id") int id) {
-        Optional<Dish> dishFromDb = dishRepository.findById(id);
-        if (dishFromDb.isPresent()) {
+        /*
+        Optional<Dish> foundDish = dishRepository.findById(id);
+        if (foundDish.isPresent()) {
             logger.info("GetDish: Found Dish with id: " + id);
-            return new ResponseEntity<>(dishFromDb.get(), HttpStatus.OK);
-        } else {
+            return new ResponseEntity<>(foundDish.get(), HttpStatus.OK);
+        } */
+        Dish foundDish = dishCacheService.getDish(id);
+        if (foundDish != null) {
+            logger.info("GetDish: Found Dish with id: " + id);
+            return new ResponseEntity<>(foundDish, HttpStatus.OK);
+        }
+        else {
             logger.error("GetDish: Dish with id: " + id + " not found");
             return ResponseEntity.notFound().build();
         }
@@ -80,14 +88,22 @@ public class DishController {
 
     @PutMapping("/UpdateDish")
     public ResponseEntity<Void> updateDish(@RequestBody AddDishDTOWithId newDish) {
-        Optional<Dish> dishFromDb = dishRepository.findById(newDish.getDishId());
+        /*
+        Optional<Dish> dishFound = dishRepository.findById(newDish.getDishId());
         //if it does not exist -> 404
-        if (!dishFromDb.isPresent()) {
+        if (!dishFound.isPresent()) {
+            logger.error("UpdateDish: Dish With ID: " + newDish.getDishId() + " Not Found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Dish With ID: " + newDish.getDishId() + " Not Found");
+        }
+        */
+        Dish dishFound = dishCacheService.getDish(newDish.getDishId());
+        if (dishFound == null) {
             logger.error("UpdateDish: Dish With ID: " + newDish.getDishId() + " Not Found");
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Dish With ID: " + newDish.getDishId() + " Not Found");
         }
         //get old image file
-        String oldImageFileName = dishFromDb.get().getDish_url();
+        //String oldImageFileName = dishFound.get().getDish_url();
+        String oldImageFileName = dishFound.getDish_url();
 
         //get the base64 dish image data
         byte[] imageBytes = Base64.getDecoder().decode(newDish.getDish_image_base64());
@@ -102,13 +118,15 @@ public class DishController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid Image Data");
         }
         String imageFileName = newDish.getDish_name().trim().replace(' ', '_').toLowerCase() + "." + extension;
-        //update the dish from DB
-        dishFromDb.get().setDish_name(newDish.getDish_name());
-        dishFromDb.get().setDish_description(newDish.getDish_description());
-        dishFromDb.get().setDish_extended_info(newDish.getDish_extended_info());
-        dishFromDb.get().setPrice(newDish.getPrice());
-        dishFromDb.get().setDish_url(imageFileName);
-        dishRepository.save(dishFromDb.get());
+        //update the dish values with the ones provided from the request
+        dishFound/*.get()*/.setDish_name(newDish.getDish_name());
+        dishFound/*.get()*/.setDish_description(newDish.getDish_description());
+        dishFound/*.get()*/.setDish_extended_info(newDish.getDish_extended_info());
+        dishFound/*.get()*/.setPrice(newDish.getPrice());
+        dishFound/*.get()*/.setDish_url(imageFileName);
+
+        dishCacheService.updateCacheEntry(dishFound);
+        dishRepository.save(dishFound/*.get()*/);
 
         //delete OLD static file and create NEW image file
         try {
@@ -129,12 +147,14 @@ public class DishController {
     public ResponseEntity<Integer> addDish(@RequestBody AddDishDTO newDish) {
         //search in db(if exists-> return 409 CONFLICT)
         //we don't have the ID yet, search by other parameters
-        List<Dish> foundInDb = dishRepository.existDishWithoutId(
+        /*List<Dish> found = dishRepository.existDishWithoutId(
                         newDish.getDish_name(),
                         newDish.getDish_description(),
                         newDish.getPrice(),
                         newDish.getDish_extended_info());
-        if (foundInDb.size() > 0) {
+        */
+        boolean found = dishCacheService.existDishWithoutId(newDish);
+        if (found/*found.size() > 0*/) {
             logger.error("AddDish: Dish already exists");
             throw new ResponseStatusException(HttpStatus.CONFLICT,"Dish Already Exists");
         }
@@ -152,8 +172,10 @@ public class DishController {
         //now insert the dish into the db and receive the DishID returned
         String imageFileName = newDish.getDish_name().trim().replace(' ', '_').toLowerCase() + "." + extension;
         Dish newDishToAdd = new Dish(newDish.getDish_name(), newDish.getDish_description(), newDish.getPrice(), newDish.getDish_extended_info(), imageFileName);
-        //save to db
+
+        //save to db first (to get the fresh Id)
         newDishToAdd = dishRepository.save(newDishToAdd);
+        dishCacheService.adddCacheEntry(newDishToAdd);
 
         // put to static dishimages folder the image
         try {
@@ -170,15 +192,17 @@ public class DishController {
 
     @DeleteMapping("/DeleteDish/{id}")
     public ResponseEntity<Dish> deleteDish(@PathVariable("id") int id) {
-        Optional<Dish> dishFromDb = dishRepository.findById(id);
-        if (dishFromDb.isPresent()) {
-            String imageName = dishFromDb.get().getDish_url();
+        //Optional<Dish> dishFromDb = dishRepository.findById(id);
+        Dish localDish = dishCacheService.getDish(id);
+        if (localDish != null /*dishFromDb.isPresent()*/) {
+            String imageName = /*dishFromDb.get()*/localDish.getDish_url();
             dishRepository.deleteById(id);
+            dishCacheService.deleteCacheEntry(id);
             //delete static dish image file
             try {
                 Path staticFolderPath = Paths.get(resourceLoader.getResource("classpath:static").getURI());
-                Path imageFilePath = staticFolderPath.resolve("dishimages/" + dishFromDb.get().getDish_url());
-                // Write to file
+                Path imageFilePath = staticFolderPath.resolve("dishimages/" + /*dishFromDb.get()*/localDish.getDish_url());
+                // delete image file
                 Files.deleteIfExists(imageFilePath);
             } catch (IOException ioe) {
                 //it's OK, image file is not critical error
@@ -241,5 +265,9 @@ public class DishController {
         return ResponseEntity.ok().build();
     }
 
-
+    @GetMapping("/GetUserOrders/{userId}")
+    public ResponseEntity<UserOrdersDTO> getUserOrders(@PathVariable("userId") String userId) {
+        //TODO!
+        return ResponseEntity.internalServerError().build();
+    }
 }

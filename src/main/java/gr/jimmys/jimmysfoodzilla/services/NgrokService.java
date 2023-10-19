@@ -1,6 +1,6 @@
 package gr.jimmys.jimmysfoodzilla.services;
 
-import jakarta.annotation.PreDestroy;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,9 +22,14 @@ public class NgrokService {
 
     private final Logger logger = LoggerFactory.getLogger(NgrokService.class);
     public NgrokService() {
+
+    }
+
+    @PostConstruct
+    public void init() {
         Thread ngrokThread = new Thread( () -> {
             try {
-                Thread.sleep(5000); //wait for initialization
+                //Thread.sleep(5000); //wait so intiialization happens (not needed when @PostConstruct is used, after constructor)
                 //don't run ngrok in production
                 if (!isDev)
                     return;
@@ -46,6 +51,5 @@ public class NgrokService {
             }
         });
         ngrokThread.start();
-
     }
 }

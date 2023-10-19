@@ -29,6 +29,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/Dishes/GetDish/**").permitAll()
                         // Routes that require authorization
                         .requestMatchers(HttpMethod.POST, "/api/Dishes/Order").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/Dishes/GetUserOrders/**").authenticated()
                         // Routes that require authorization + authentication via claim "permissions" with value "admin:admin"
                         .requestMatchers(HttpMethod.POST, "/api/Dishes/AddDish").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/Dishes/DeleteDish/**").authenticated()

@@ -85,19 +85,18 @@ public class Dish
         Dish_extended_info = dish_extended_info;
         Dish_url = dish_url;
     }
+
+    @Override
+    public boolean equals(Object o){
+        if (o == this)
+            return true;
+        if (!(o instanceof Dish d))
+            return false;
+        return this.DishId == d.getDishId();
+    }
+    @Override
+    public int hashCode() {
+        return this.DishId; //why not? ID -> distinct value..
+    }
 }
 
-class DishWithCounter extends Dish  {
-    private int Dish_counter;
-
-    public DishWithCounter(String dish_name, String dish_description, BigDecimal price, String dish_extended_info, String dish_url, int dish_counter){
-        super(dish_name, dish_description, price, dish_extended_info, dish_url);
-        Dish_counter = dish_counter;
-    }
-    public int getDish_counter() {
-        return Dish_counter;
-    }
-    public void setDish_counter(int dish_counter) {
-        Dish_counter = dish_counter;
-    }
-}
