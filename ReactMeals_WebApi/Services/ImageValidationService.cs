@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Components.Web;
-
-namespace ReactMeals_WebApi.Services
+﻿namespace ReactMeals_WebApi.Services
 {
     public interface IImageValidationService
     {
