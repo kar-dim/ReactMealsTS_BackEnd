@@ -314,7 +314,8 @@ namespace ReactMeals_WebApi.Controllers
         public async Task<ActionResult<UserOrdersDTO>> GetUserOrders(string userId)
         {
             //check the user id of the token versus the one received from the web
-            if (!User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value.Equals(userId))
+            Claim? nameClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            if (nameClaim == null || !nameClaim.Value.Equals(userId))
             {
                 _logger.LogError("GetUserOrders: Unauthorized User with userId: "+userId);
                 return Unauthorized();
