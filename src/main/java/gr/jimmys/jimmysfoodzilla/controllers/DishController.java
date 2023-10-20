@@ -1,5 +1,11 @@
 package gr.jimmys.jimmysfoodzilla.controllers;
 
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jwt.SignedJWT;
 import gr.jimmys.jimmysfoodzilla.DTO.*;
 import gr.jimmys.jimmysfoodzilla.models.Dish;
 import gr.jimmys.jimmysfoodzilla.models.Order;
@@ -9,10 +15,12 @@ import gr.jimmys.jimmysfoodzilla.repository.OrderRepository;
 import gr.jimmys.jimmysfoodzilla.repository.UserRepository;
 import gr.jimmys.jimmysfoodzilla.services.DishCacheService;
 import gr.jimmys.jimmysfoodzilla.services.ImageValidationService;
+import gr.jimmys.jimmysfoodzilla.services.JwtValidationAndRenewalService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +33,7 @@ import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -50,6 +59,9 @@ public class DishController {
 
     @Autowired
     DishCacheService dishCacheService;
+
+    @Autowired
+    JwtValidationAndRenewalService jwtValidationAndRenewalService;
 
     @GetMapping("/GetDishes")
     public ResponseEntity<List<Dish>> getDishes() {
@@ -265,9 +277,40 @@ public class DishController {
         return ResponseEntity.ok().build();
     }
 
+    //Authorized, default scheme
     @GetMapping("/GetUserOrders/{userId}")
-    public ResponseEntity<UserOrdersDTO> getUserOrders(@PathVariable("userId") String userId) {
+    public ResponseEntity<UserOrdersDTO> getUserOrders(@RequestHeader(HttpHeaders.AUTHORIZATION) String token, @PathVariable("userId") String userId) {
         //TODO!
-        return ResponseEntity.internalServerError().build();
+        if (token == null || !token.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        try {
+            // Extract the JWT token
+            SignedJWT signedJWT = SignedJWT.parse(token.substring(7)); //skip "Bearer " prefix
+            // Fetch the JWKS URL (cached)
+            JWKSet jwkSet = jwtValidationAndRenewalService.getJwkSet();
+            if (jwkSet == null) //internal problem...
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            // Retrieve the JWK with a matching key ID (kid)
+            JWK jwk = jwkSet.getKeyByKeyId(signedJWT.getHeader().getKeyID());
+            if (jwk == null)  //internal problem...
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            // Verify the JWT signature using the public key
+            JWSVerifier verifier = new RSASSAVerifier(jwk.toRSAKey());
+            if (!signedJWT.verify(verifier))
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); //cannot verify, let's return FORBIDDEN
+            // Check the 'sub' claim
+            String subject = signedJWT.getJWTClaimsSet().getSubject();
+            if (subject == null || !subject.equals(userId))
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+
+        } catch (ParseException | JOSEException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        //userId token check ok, we should retrieve this user's orders
+        //TODO!
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
 }
