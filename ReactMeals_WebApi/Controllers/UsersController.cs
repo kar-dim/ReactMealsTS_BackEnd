@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using ReactMeals_WebApi.Contexts;
 using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
+using ReactMeals_WebApi.Services;
 using RestSharp;
 using System.Net;
 using System.Text.Json;
@@ -169,8 +170,6 @@ namespace ReactMeals_WebApi.Controllers
                 _logger.LogError(_className + "Error in deleting user from api/v2/users");
                 return Problem("INTERNAL ERROR");
             }
-            //we can delete the user's orders from our own db (Order, OrderItem tables)
-            //but let's keep them for "archival/proof" reasons
             return Ok();
         }
     }
