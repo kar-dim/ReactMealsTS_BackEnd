@@ -58,6 +58,20 @@ namespace ReactMeals_WebApi.Services
             }
         }
 
+        public decimal GetDishCost(int dishId)
+        {
+            dishesCacheLock.EnterReadLock();
+            try
+            {
+                var dishInCache = _inMemoryDishes.Find(dish => dish.DishId == dishId);
+                return dishInCache == null ? -1 : dishInCache.Price; 
+            }
+            finally
+            {
+                dishesCacheLock.ExitReadLock();
+            }
+        }
+
         public void AddCacheEntry(Dish dish)
         {
             dishesCacheLock.EnterWriteLock();

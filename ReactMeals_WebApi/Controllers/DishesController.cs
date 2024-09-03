@@ -29,7 +29,7 @@ namespace ReactMeals_WebApi.Controllers
         //GET api/Dishes/GetDish/id
         //public method
         [HttpGet("GetDish/{id:int}")]
-        public ActionResult<Dish> /*async Task<ActionResult<Dish>>*/ GetDish(int id)
+        public ActionResult<Dish> GetDish(int id)
         {
             Dish foundDish = _dishesCacheService.GetDish(id);
             if (foundDish == null)
@@ -37,23 +37,14 @@ namespace ReactMeals_WebApi.Controllers
                 _logger.LogError("GetDish: Could not find dish with ID {0}", id);
                 return NotFound();
             }
-            /*
-            Dish? foundDish = await (from x in _mainDbContext.Dishes where x.DishId == id select x).FirstOrDefaultAsync();
-            if (foundDish is null)
-            {
-                _logger.LogError("GetDish: Could not find dish with ID {0}", id);
-                return NotFound();
-            }
-            */
             _logger.LogInformation("GetDish: Found dish with ID {0}", id);
             return Ok(foundDish);
-
         }
 
         //GET api/Dishes/GetDishes
         //public method
         [HttpGet("GetDishes")]
-        public ActionResult<IEnumerable<Dish>> /*async Task<ActionResult<IEnumerable<Dish>>>*/ GetDishes()
+        public ActionResult<IEnumerable<Dish>> GetDishes()
         {
             List<Dish> foundDishes = _dishesCacheService.GetDishes();
             if (foundDishes.Count == 0)
@@ -61,18 +52,9 @@ namespace ReactMeals_WebApi.Controllers
                 _logger.LogError("GetDishes: Could not find any dishes");
                 return NotFound();
             }
-            /*
-            List<Dish> foundDishes = await _mainDbContext.Dishes.ToListAsync();
-            if (foundDishes is null || foundDishes.Count == 0)
-            {
-                _logger.LogError("GetDishes: Could not find any dishes");
-                return NotFound();
-            }
-            */
             _logger.LogInformation("GetDishes: Returned all dishes. Length: {0}", foundDishes.Count);
             return Ok(foundDishes);
         }
-
 
         //POST api/Dishes/AddDish
         //only for Admins, to add new dish to the database
@@ -82,14 +64,6 @@ namespace ReactMeals_WebApi.Controllers
         {
             //search in db(if exists-> return 409 CONFLICT)
             //we don't have the ID yet, search by other parameters
-            /*
-            var localDish = await _mainDbContext.Dishes
-                .Where(x => x.Dish_name.Equals(newDish.Dish_name))
-                .Where(x => x.Dish_description.Equals(newDish.Dish_description))
-                .Where(x => x.Price.Equals(newDish.Price))
-                .Where(x => x.Dish_extended_info.Equals(newDish.Dish_extended_info))
-                .ToListAsync();
-            */
             var localDish = _dishesCacheService.GetDishes()
                 .Where(x => x.Dish_name.Equals(newDish.Dish_name))
                 .Where(x => x.Dish_description.Equals(newDish.Dish_description))
@@ -121,22 +95,16 @@ namespace ReactMeals_WebApi.Controllers
                 Price = newDish.Price,
                 Dish_url = imageFileName
             };
-
-            //add to cache
+            //add to cache and db
             _dishesCacheService.AddCacheEntry(newDishToAdd);
-            //insert to db
             await _mainDbContext.AddAsync(newDishToAdd);
             await _mainDbContext.SaveChangesAsync();
-
-            //if all OK, put the image into "Images" static files folder
-            string filePath = @"Images\" + imageFileName;
             // Write image data to the static assets folder
-            System.IO.File.WriteAllBytes(filePath, imageBytes);
+            System.IO.File.WriteAllBytes(@"Images\" + imageFileName, imageBytes);
 
             //return the new dishId
             return Ok(newDishToAdd.DishId);
         }
-
 
         //PUT api/Dishes/UpdateDish
         //only for Admins, to edit a dish
@@ -150,19 +118,8 @@ namespace ReactMeals_WebApi.Controllers
                 _logger.LogError("UpdateDish: Dish With ID: " + newDish.DishId + " Not Found");
                 return NotFound("Dish With ID: " + newDish.DishId + " Not Found");
             }
-            /*
-            //don't track this, it is used for "reading" only
-            Dish? localDish = await _mainDbContext.Dishes.AsNoTracking().Where(x => x.DishId == newDish.DishId).FirstOrDefaultAsync();
-            //if it does not exist -> 404)
-            if (dishFromDb == null)
-            {
-                _logger.LogError("UpdateDish: Dish With ID: " + newDish.DishId + " Not Found");
-                return NotFound("Dish With ID: " + newDish.DishId + " Not Found");
-            }
-            */
             //get old image url file
             string oldImageFileName = localDish.Dish_url;
-            localDish = null;
 
             //get the base64 dish image data
             byte[] imageBytes = Convert.FromBase64String(newDish.Dish_image_base64);
@@ -185,31 +142,23 @@ namespace ReactMeals_WebApi.Controllers
                 Dish_url = imageFileName
             };
 
-            //update cache
+            //add to cache and db
             _dishesCacheService.UpdateCacheEntry(newDishToAdd);
-            //update db
             _mainDbContext.Dishes.Update(newDishToAdd);
             await _mainDbContext.SaveChangesAsync();
-
-            //if all OK, handle static images
-            string oldfilePath = @"Images\" + oldImageFileName;
-            string newfilePath = @"Images\" + imageFileName;
+            //delete old image and create new file
             try
             {
-                //remove OLD static image
-                System.IO.File.Delete(oldfilePath);
-                //put the new image into "Images" static files folder
-                System.IO.File.WriteAllBytes(newfilePath, imageBytes);
+                System.IO.File.Delete(@"Images\" + oldImageFileName);
+                System.IO.File.WriteAllBytes(@"Images\" + imageFileName, imageBytes);
             }
             catch (Exception)
             {
                 //it's ok, not something serious
                 _logger.LogError("UpdateDish: Could not remove/update static dish image");
             }
-
             return Ok();
         }
-
 
         //DELETE api/Dishes/DeleteDish
         //only for Admins, to delete a dish
@@ -223,26 +172,16 @@ namespace ReactMeals_WebApi.Controllers
                 _logger.LogError("DeleteDish: Dish With ID: " + id + " Not Found");
                 return NotFound("Dish With ID: " + id + " Not Found");
             }
-            /*
-            Dish? localDish = await _mainDbContext.Dishes.Where(x => x.DishId == id).FirstOrDefaultAsync();
-            if (localDish == null)
-            {
-                _logger.LogError("DeleteDish: Dish With ID: " + id + " Not Found");
-                return NotFound("Dish With ID: " + id + " Not Found");
-            }
-            */
-            string imageFileName = localDish.Dish_url;
 
-            //if found, remove from cache
+            //if found, remove from cache and db
             _dishesCacheService.DeleteCacheEntry(id);
-            //if found, remove it from db
             _mainDbContext.Dishes.Remove(localDish);
             await _mainDbContext.SaveChangesAsync();
 
             //remove static image
             try
             {
-                System.IO.File.Delete(@"Images\" + imageFileName);
+                System.IO.File.Delete(@"Images\" + localDish.Dish_url);
             } catch (Exception)
             {
                 //it's ok, not something serious
@@ -259,48 +198,29 @@ namespace ReactMeals_WebApi.Controllers
         public async Task<ActionResult<Order>> CreateOrder([FromBody] OrderDTO webOrder)
         {
             Console.WriteLine("Order received");
-
-            if (webOrder is null || webOrder.order is null || webOrder.UserId is null || webOrder.order.Count == 0)
+            if (webOrder == null || webOrder.order == null || webOrder.UserId == null || webOrder.order.Count == 0)
             {
                 //wrong input data, something bad happened on CLIENT side -> 400
                 _logger.LogError("Order: Wrong Order Data");
                 return BadRequest();
             }
-            List<Dish> dishList = _dishesCacheService.GetDishes(); /*await _mainDbContext.Dishes.ToListAsync() */
-            if (dishList is null || dishList.Count == 0)
-            {
-                //something bad happened on OUR side -> 500
-                _logger.LogError("Order: NO dishes found!");
-                return Problem("Internal Error");
-            }
 
-            decimal cost = 0.0m;
+            decimal totalCost = 0.0m;
             foreach (OrderItemDTO item in webOrder.order)
             {
-                string dishName = "";
-                bool idExistsInDb = false;
                 //if no orders in DB -> no need to check anything
-                foreach (Dish dish in dishList)
+                decimal dishCost = _dishesCacheService.GetDishCost(item.DishId);
+                if (dishCost == -1)
                 {
-                    if (item.DishId == dish.DishId)
-                    {
-                        idExistsInDb = true;
-                        dishName = dish.Dish_name;
-                        cost += dish.Price * item.Dish_counter;
-                        break;
-                    }
-                }
-                if (!idExistsInDb)
-                {
-                    //404
                     _logger.LogError("Order: At least one Order Dish ID does not exist in DB");
                     return NotFound("At least one Dish ID does not exist!");
                 }
-                _logger.LogInformation("Dish Id: {0}, Dish NAME: {1}, Dish Counter: {2}", item.DishId, dishName, item.Dish_counter);
+                totalCost += dishCost * item.Dish_counter;
+                _logger.LogInformation("Dish Id: {0}, Dish Counter: {1}", item.DishId, item.Dish_counter);
             }
 
             Order orderToInsert = OrderDTOMapping.DTOtoEntity(webOrder);
-            orderToInsert.totalCost = cost;
+            orderToInsert.totalCost = totalCost;
 
             await _mainDbContext.AddAsync(orderToInsert);
             await _mainDbContext.SaveChangesAsync();

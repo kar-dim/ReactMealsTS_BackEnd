@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using ReactMeals_WebApi.Models;
-using System.ComponentModel.DataAnnotations;
 
 namespace ReactMeals_WebApi.DTO
 {

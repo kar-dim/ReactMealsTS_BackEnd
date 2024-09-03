@@ -68,10 +68,10 @@ if (builder.Environment.IsDevelopment())
 //Auth0 Management API JWT Token Renewal Service
 builder.Services.AddScoped<JwtService>(); // Add this line to register JwtService
 builder.Services.AddSingleton<JwtValidationAndRenewalService>();
-builder.Services.AddHostedService<JwtValidationAndRenewalService>(provider => provider.GetService<JwtValidationAndRenewalService>());
-//in memory dishes service
+builder.Services.AddHostedService(provider => provider.GetService<JwtValidationAndRenewalService>());
+//in-memory dishes service
 builder.Services.AddSingleton<DishesCacheService>();
-builder.Services.AddHostedService<DishesCacheService>(provider => provider.GetService<DishesCacheService>());
+builder.Services.AddHostedService(provider => provider.GetService<DishesCacheService>());
 
 var app = builder.Build();
 
