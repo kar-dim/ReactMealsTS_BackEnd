@@ -6,11 +6,11 @@ namespace ReactMeals_WebApi.DTO
 {
     public class AddDishDTO
     {
-        public string? Dish_name { get; set; }
-        public string? Dish_description { get; set; }
+        public string Dish_name { get; set; }
+        public string Dish_description { get; set; }
         [Precision(18, 2)]
         public decimal Price { get; set; }
-        public string? Dish_extended_info { get; set; }
+        public string Dish_extended_info { get; set; }
         public string Dish_image_base64 { get; set; } //base64 encoded image sent from client
     }
 

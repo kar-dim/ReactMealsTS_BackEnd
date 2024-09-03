@@ -29,9 +29,9 @@ namespace ReactMeals_WebApi.Controllers
         //GET api/Dishes/GetDish/id
         //public method
         [HttpGet("GetDish/{id:int}")]
-        public async Task<ActionResult<Dish>> GetDish(int id)
+        public ActionResult<Dish> /*async Task<ActionResult<Dish>>*/ GetDish(int id)
         {
-            Dish? foundDish = _dishesCacheService.GetDish(id);
+            Dish foundDish = _dishesCacheService.GetDish(id);
             if (foundDish == null)
             {
                 _logger.LogError("GetDish: Could not find dish with ID {0}", id);
@@ -53,7 +53,7 @@ namespace ReactMeals_WebApi.Controllers
         //GET api/Dishes/GetDishes
         //public method
         [HttpGet("GetDishes")]
-        public async Task<ActionResult<IEnumerable<Dish>>> GetDishes()
+        public ActionResult<IEnumerable<Dish>> /*async Task<ActionResult<IEnumerable<Dish>>>*/ GetDishes()
         {
             List<Dish> foundDishes = _dishesCacheService.GetDishes();
             if (foundDishes.Count == 0)
@@ -104,7 +104,7 @@ namespace ReactMeals_WebApi.Controllers
             //get the base64 dish image data
             byte[] imageBytes = Convert.FromBase64String(newDish.Dish_image_base64);
             //some very basic validation (magic bytes)
-            string? extension = _imageValidationService.IsValidImageMagicBytes(imageBytes);
+            string extension = _imageValidationService.IsValidImageMagicBytes(imageBytes);
             if (extension == null)
             {
                 _logger.LogError("AddDish: Invalid image data");
@@ -144,7 +144,7 @@ namespace ReactMeals_WebApi.Controllers
         [HttpPut("UpdateDish")]
         public async Task<ActionResult<Dish>> UpdateDish([FromBody] AddDishDTOWithId newDish)
         {
-            Dish? localDish = _dishesCacheService.GetDish(newDish.DishId);
+            Dish localDish = _dishesCacheService.GetDish(newDish.DishId);
             if (localDish == null)
             {
                 _logger.LogError("UpdateDish: Dish With ID: " + newDish.DishId + " Not Found");
@@ -167,7 +167,7 @@ namespace ReactMeals_WebApi.Controllers
             //get the base64 dish image data
             byte[] imageBytes = Convert.FromBase64String(newDish.Dish_image_base64);
             //some very basic validation (magic bytes)
-            string? extension = _imageValidationService.IsValidImageMagicBytes(imageBytes);
+            string extension = _imageValidationService.IsValidImageMagicBytes(imageBytes);
             if (extension == null)
             {
                 _logger.LogError("UpdateDish: Invalid Image Data");
@@ -201,7 +201,7 @@ namespace ReactMeals_WebApi.Controllers
                 //put the new image into "Images" static files folder
                 System.IO.File.WriteAllBytes(newfilePath, imageBytes);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 //it's ok, not something serious
                 _logger.LogError("UpdateDish: Could not remove/update static dish image");
@@ -217,7 +217,7 @@ namespace ReactMeals_WebApi.Controllers
         [HttpDelete("DeleteDish/{id:int}")]
         public async Task<ActionResult<Dish>> DeleteDish(int id)
         {
-            Dish? localDish = _dishesCacheService.GetDish(id);
+            Dish localDish = _dishesCacheService.GetDish(id);
             if (localDish == null)
             {
                 _logger.LogError("DeleteDish: Dish With ID: " + id + " Not Found");
@@ -243,7 +243,7 @@ namespace ReactMeals_WebApi.Controllers
             try
             {
                 System.IO.File.Delete(@"Images\" + imageFileName);
-            } catch (Exception ex)
+            } catch (Exception)
             {
                 //it's ok, not something serious
                 _logger.LogError("DeleteDish: Could not remove static dish image");
@@ -266,7 +266,7 @@ namespace ReactMeals_WebApi.Controllers
                 _logger.LogError("Order: Wrong Order Data");
                 return BadRequest();
             }
-            List<Dish>? dishList = _dishesCacheService.GetDishes(); /*await _mainDbContext.Dishes.ToListAsync() */
+            List<Dish> dishList = _dishesCacheService.GetDishes(); /*await _mainDbContext.Dishes.ToListAsync() */
             if (dishList is null || dishList.Count == 0)
             {
                 //something bad happened on OUR side -> 500
@@ -314,7 +314,7 @@ namespace ReactMeals_WebApi.Controllers
         public async Task<ActionResult<UserOrdersDTO>> GetUserOrders(string userId)
         {
             //check the user id of the token versus the one received from the web
-            Claim? nameClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+            Claim nameClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
             if (nameClaim == null || !nameClaim.Value.Equals(userId))
             {
                 _logger.LogError("GetUserOrders: Unauthorized User with userId: "+userId);
@@ -340,7 +340,7 @@ namespace ReactMeals_WebApi.Controllers
             var allUserOrders = await allUserOrdersQuery.ToListAsync();
             if (allUserOrders == null || allUserOrders.Count == 0)
             {
-                return Ok(new UserOrdersDTO { orders = new UserOrder[]{} } ); //empty response -> user has no orders (technically not an error)
+                return Ok(new UserOrdersDTO { orders = Array.Empty<UserOrder>() } ); //empty response -> user has no orders (technically not an error)
             }
             List<UserOrder> userOrderList = new List<UserOrder>();
             //split the list into sublists, each group is one order of a specific user

@@ -15,7 +15,7 @@ namespace ReactMeals_WebApi.Controllers
     [ApiController]
     public class UsersController : ControllerBase
     {
-        private string _className;
+        private readonly string _className;
         private readonly ILogger<UsersController> _logger;
         //private readonly OrdersDbContext _ordersDbContext;
         private readonly MainDbContext _mainDbContext;
@@ -141,10 +141,8 @@ namespace ReactMeals_WebApi.Controllers
                 _logger.LogError(_className + "Error in patching user from api/v2/users");
                 return Problem("INTERNAL ERROR");
             }
-
             return Ok();
         }
-
 
         //DELETE api/Users/DeleteUser
         //only for Admins, to delete a User
@@ -175,6 +173,5 @@ namespace ReactMeals_WebApi.Controllers
             //but let's keep them for "archival/proof" reasons
             return Ok();
         }
-
     }
 }

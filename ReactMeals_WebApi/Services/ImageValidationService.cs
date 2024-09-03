@@ -2,7 +2,7 @@
 {
     public interface IImageValidationService
     {
-        public string? IsValidImageMagicBytes(byte[] imageData);
+        public string IsValidImageMagicBytes(byte[] imageData);
     }
     public class ImageValidationService : IImageValidationService {
 
@@ -17,7 +17,7 @@
                 { new byte[] { 0x42, 0x4D}, "bmp" }
             };
         }
-        public string? IsValidImageMagicBytes(byte[] imageData)
+        public string IsValidImageMagicBytes(byte[] imageData)
         {
             if (imageData.Length < 32) //too small
                 return null;

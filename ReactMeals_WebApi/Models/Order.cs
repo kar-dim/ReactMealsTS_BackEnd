@@ -15,11 +15,11 @@ namespace ReactMeals_WebApi.Models
     }
     public class Order
     {
-        public int? Id { get; set; }
+        public int Id { get; set; }
 
         [Precision(18, 2)]
-        public decimal? totalCost {  get; set; }
-        public ICollection<OrderItem>? order { get; set; }  
+        public decimal totalCost {  get; set; }
+        public ICollection<OrderItem> order { get; set; }  
         public User User { get; set; } //used by EF
         public string UserId { get; set; } //foreign key to User (auto-discovered by EF because of <Name> + <Id>)
     }

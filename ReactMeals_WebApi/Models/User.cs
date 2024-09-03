@@ -5,7 +5,7 @@ namespace ReactMeals_WebApi.Models
     public class User
     {
         [Key]
-        public string? User_Id { get; set; } //"user_id" from auth0
+        public string User_Id { get; set; } //"user_id" from auth0
 
         public string Email { get; set; } //"email" from auth0
 

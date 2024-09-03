@@ -8,36 +8,18 @@ namespace ReactMeals_WebApi.Services
     //useful for bulk Get requests. After writing into the cache, controllers should immediately persist data into db
     public class DishesCacheService : IHostedService, IDisposable
     {
-        private string _className;
-        private List<Dish> _inMemoryDishes;
+        private readonly List<Dish> _inMemoryDishes;
         private readonly ReaderWriterLockSlim dishesCacheLock;
-        private CancellationTokenSource _cancellationTokenSource;
-        private readonly ILogger<DishesCacheService> _logger;
-        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly CancellationTokenSource _cancellationTokenSource;
 
-        public DishesCacheService(ILogger<DishesCacheService> logger, IServiceScopeFactory scopeFactory, IConfiguration configuration)
+        public DishesCacheService(IServiceScopeFactory scopeFactory, IConfiguration configuration)
         {
             dishesCacheLock = new ReaderWriterLockSlim();
-            _className = nameof(DishesCacheService) + ": ";
             _cancellationTokenSource = new CancellationTokenSource();
-            _logger = logger;
-            _scopeFactory = scopeFactory;
-            using (var scope = _scopeFactory.CreateScope())
-            {
-                //get the scoped contextDb
-                var mainDbContext = scope.ServiceProvider.GetRequiredService<MainDbContext>();
-
-                _inMemoryDishes = new List<Dish>();
-                var dishEntries = from dish in mainDbContext.Dishes
-                                   orderby dish.DishId ascending
-                                   select dish;
-
-                //populate cache
-                foreach (var dishEntry in dishEntries)
-                {
-                    _inMemoryDishes.Add(dishEntry);
-                }
-            }
+            //get the scoped contextDb
+            var mainDbContext = scopeFactory.CreateScope().ServiceProvider.GetRequiredService<MainDbContext>();
+            //populate cache
+            _inMemoryDishes = new List<Dish>(mainDbContext.Dishes.OrderBy(dish => dish.DishId));
         }
         public Task StartAsync(CancellationToken cancellationToken)
         {
@@ -50,17 +32,12 @@ namespace ReactMeals_WebApi.Services
             await Task.CompletedTask;
         }
 
-        public Dish? GetDish(int dishId)
+        public Dish GetDish(int dishId)
         {
             dishesCacheLock.EnterReadLock();
             try
             {
-               foreach(Dish dish in _inMemoryDishes)
-               {
-                    if (dish.DishId == dishId)
-                        return dish;
-               }
-               return null;
+                return _inMemoryDishes.Find(dish => dish.DishId == dishId);
             }
             finally
             {
@@ -99,14 +76,9 @@ namespace ReactMeals_WebApi.Services
             dishesCacheLock.EnterWriteLock();
             try
             {
-                foreach (Dish dish in _inMemoryDishes)
-                {
-                    if (dish.DishId == dishId)
-                    {
-                        _inMemoryDishes.Remove(dish);
-                        break;
-                    }
-                }
+                Dish dishToRemove = _inMemoryDishes.FirstOrDefault(dish => dish.DishId == dishId);
+                if (dishToRemove != null)
+                    _inMemoryDishes.Remove(dishToRemove);
             }
             finally
             {
@@ -119,14 +91,9 @@ namespace ReactMeals_WebApi.Services
             dishesCacheLock.EnterWriteLock();
             try
             {
-                for (int i=0; i<_inMemoryDishes.Count; i++)
-                {
-                    if (_inMemoryDishes[i].DishId == dish.DishId)
-                    {
-                        _inMemoryDishes[i] = dish;
-                        break;
-                    }
-                }
+                int dishIndex = _inMemoryDishes.FindIndex(d => d.DishId == dish.DishId);
+                if (dishIndex != -1)
+                    _inMemoryDishes[dishIndex] = dish;
             }
             finally
             {
@@ -136,6 +103,7 @@ namespace ReactMeals_WebApi.Services
 
         public void Dispose()
         {
+            GC.SuppressFinalize(this);
             _cancellationTokenSource?.Dispose();
         }
     }

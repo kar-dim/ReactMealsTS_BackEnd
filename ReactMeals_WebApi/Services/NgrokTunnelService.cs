@@ -14,10 +14,10 @@ namespace ReactMeals_WebApi.Services
 
         public NgrokTunnelService(IConfiguration config, IServer server, IHostApplicationLifetime hostApplicationLifetime, ILogger<NgrokTunnelService> logger)
         {
-            this._config = config;
-            this._server = server;
-            this._hostApplicationLifetime = hostApplicationLifetime;
-            this._logger = logger;
+            _config = config;
+            _server = server;
+            _hostApplicationLifetime = hostApplicationLifetime;
+            _logger = logger;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

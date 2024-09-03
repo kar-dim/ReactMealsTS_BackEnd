@@ -10,17 +10,17 @@ namespace ReactMeals_WebApi.Services
     public class Auth0ManagementResponse
     {
         [JsonPropertyName("access_token")]
-        public string? AccessToken { get; set; }
+        public string AccessToken { get; set; }
         [JsonPropertyName("expires_in")]
-        public int? ExpiresIn { get; set; }
+        public int ExpiresIn { get; set; }
         [JsonPropertyName("scope")]
-        public string? Scope { get; set; }
+        public string Scope { get; set; }
         [JsonPropertyName("token_type")]
-        public string? TokenType { get; set; }
+        public string TokenType { get; set; }
     }
     public class JwtService
     {
-        private string _className;
+        private readonly string _className;
         private readonly MainDbContext _mainDbContext;
         private readonly ILogger<JwtService> _logger;
         private readonly IConfiguration _configuration;
@@ -58,18 +58,18 @@ namespace ReactMeals_WebApi.Services
                 return (DateTime.Now, false, string.Empty);
             }
             Auth0ManagementResponse resp = response.Data;
-            if (resp.ExpiresIn == null || resp.TokenType == null || resp.AccessToken == null || resp.Scope == null)
+            if (resp.ExpiresIn == 0 || resp.TokenType == null || resp.AccessToken == null || resp.Scope == null)
             {
                 _logger.LogCritical(_className + "ManagementAPI Token is malformed! Check Auth0 configuration");
                 return (DateTime.Now, false, string.Empty); //let's consider it "expired" if no "exp" claim is found (it should never happen)
             }
             
-            Token? tokenFromDb = await _mainDbContext.Tokens.Where(x => x.TokenType == "M_API").FirstOrDefaultAsync();
+            Token tokenFromDb = await _mainDbContext.Tokens.Where(x => x.TokenType == "M_API").FirstOrDefaultAsync();
             if (tokenFromDb != null) {
                 _mainDbContext.Tokens.Remove(tokenFromDb);
             }
 
-            DateTime tokenExpireDateTime = DateTime.Now.AddSeconds(resp.ExpiresIn.Value);
+            DateTime tokenExpireDateTime = DateTime.Now.AddSeconds(resp.ExpiresIn);
             Token newToken = new Token
             {
                 TokenValue = resp.AccessToken,

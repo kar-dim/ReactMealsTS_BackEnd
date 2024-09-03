@@ -10,24 +10,24 @@ namespace ReactMeals_WebApi.DTO
     
     public class OrderDTO
     {
-        public List<OrderItemDTO>? order { get; set; }
+        public List<OrderItemDTO> order { get; set; }
         public string UserId { get; set; }
     }
 
     public class OrderDTOMapping
     {
-        public static Models.Order DTOtoEntity(OrderDTO orderDTO)
+        public static Order DTOtoEntity(OrderDTO orderDTO)
         {
             ICollection<OrderItem> items = new List<OrderItem>();
             for (int i=0; i<orderDTO.order.Count; i++)
             {
-                items.Add(new OrderItem()
+                items.Add(new OrderItem
                 {
                     DishId = orderDTO.order[i].DishId,
                     Dish_counter = orderDTO.order[i].Dish_counter,
                 });
             }
-            return new Models.Order() { order = items, UserId = orderDTO.UserId};
+            return new Order { order = items, UserId = orderDTO.UserId};
         }
     }
 }

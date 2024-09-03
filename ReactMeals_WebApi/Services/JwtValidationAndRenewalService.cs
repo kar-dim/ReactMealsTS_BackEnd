@@ -3,9 +3,9 @@ using ReactMeals_WebApi.Services;
 
 public class JwtValidationAndRenewalService : IHostedService, IDisposable
 {
-    private string _className;
+    private readonly string _className;
     private readonly IServiceScopeFactory _scopeFactory;
-    private CancellationTokenSource _cancellationTokenSource;
+    private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly ILogger<JwtValidationAndRenewalService> _logger;
     private string _managementApiAccessTokenValue; //the token value that is saved to db (so that we won't ask the db all the time for the token)
     public string ManagementApiAccessTokenValue
@@ -25,53 +25,50 @@ public class JwtValidationAndRenewalService : IHostedService, IDisposable
     public Task StartAsync(CancellationToken cancellationToken)
     {
         // Start the token renewal loop
-        Task.Run(async () => await RenewTokenLoop(_cancellationTokenSource.Token));
+        Task.Run(async () => await RenewTokenLoop(_cancellationTokenSource.Token), cancellationToken);
         return Task.CompletedTask;
     }
 
     private async Task RenewTokenLoop(CancellationToken cancellationToken)
     {
         _logger.LogInformation(_className + "PerformTask called");
-        using (var scope = _scopeFactory.CreateScope())
+        var jwtService = _scopeFactory.CreateScope().ServiceProvider.GetRequiredService<JwtService>();
+
+        while (!cancellationToken.IsCancellationRequested)
         {
-            var jwtService = scope.ServiceProvider.GetRequiredService<JwtService>();
+            (bool isExpired, DateTime? dateExpiry, string accessToken) = await jwtService.IsTokenExpired();
 
-            while (!cancellationToken.IsCancellationRequested)
+            // Check if the token is expired
+            if (isExpired)
             {
-                (bool isExpired, DateTime? dateExpiry, string accessToken) = await jwtService.IsTokenExpired();
+                // Renew the token and get the expiration time
+                (DateTime tokenExpiration, bool success, string newAccessToken) = await jwtService.RenewToken();
 
-                // Check if the token is expired
-                if (isExpired)
+                //something bad happened while renewing (network error etc) -> wait some seconds and try again later
+                if (!success)
                 {
-                    // Renew the token and get the expiration time
-                    (DateTime tokenExpiration, bool success, string newAccessToken) = await jwtService.RenewToken();
-
-                    //something bad happened while renewing (network error etc) -> wait some seconds and try again later
-                    if (!success)
-                    {
-                        await Task.Delay(20 * 1000, cancellationToken);
-                    }
-                    else
-                    {
-                        // Calculate the time to sleep (minus 30 seconds)
-                        TimeSpan sleepTime = tokenExpiration.Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
-                        _managementApiAccessTokenValue = newAccessToken;
-                        // Sleep until it's time to renew the token (plus some seconds)
-                        await Task.Delay(sleepTime, cancellationToken);
-                    }
+                    await Task.Delay(20 * 1000, cancellationToken);
                 }
                 else
                 {
-                    if (dateExpiry != null)
-                    {
-                        // The token is still valid, sleep
-                        _managementApiAccessTokenValue = accessToken;
-                        TimeSpan sleepTime = ((DateTime)dateExpiry).Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
-                        if (sleepTime.Seconds > 0)
-                            await Task.Delay(sleepTime, cancellationToken);
-                    }
-                    
+                    // Calculate the time to sleep (minus 30 seconds)
+                    TimeSpan sleepTime = tokenExpiration.Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
+                    _managementApiAccessTokenValue = newAccessToken;
+                    // Sleep until it's time to renew the token (plus some seconds)
+                    await Task.Delay(sleepTime, cancellationToken);
                 }
+            }
+            else
+            {
+                if (dateExpiry != null)
+                {
+                    // The token is still valid, sleep
+                    _managementApiAccessTokenValue = accessToken;
+                    TimeSpan sleepTime = ((DateTime)dateExpiry).Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
+                    if (sleepTime.Seconds > 0)
+                        await Task.Delay(sleepTime, cancellationToken);
+                }
+
             }
         }
     }
@@ -84,6 +81,7 @@ public class JwtValidationAndRenewalService : IHostedService, IDisposable
 
     public void Dispose()
     {
+        GC.SuppressFinalize(this);
         _cancellationTokenSource?.Dispose();
     }
 }
