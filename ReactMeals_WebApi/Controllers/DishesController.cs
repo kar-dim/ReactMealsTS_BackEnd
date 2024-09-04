@@ -224,11 +224,11 @@ namespace ReactMeals_WebApi.Controllers
             }
             //search the OrderItem table to see if this user has any orders
             var allUserOrders = await (from orderItem in _mainDbContext.OrderItems
-                        join order in _mainDbContext.Orders on orderItem.OrderId equals order.Id
+                        join order in _mainDbContext.Orders on orderItem.WebOrderId equals order.Id
                         join dish in _mainDbContext.Dishes on orderItem.DishId equals dish.DishId
                         where order.UserId == userId
                         select new {
-                            order.TotalCost, orderItem.Id, orderItem.OrderId, orderItem.DishId, orderItem.Dish_counter,
+                            order.TotalCost, orderItem.Id, orderItem.WebOrderId, orderItem.DishId, orderItem.Dish_counter,
                             dish.Dish_name, dish.Dish_description, dish.Price
                         }).ToListAsync();
 
@@ -237,7 +237,7 @@ namespace ReactMeals_WebApi.Controllers
  
             List<UserOrder> userOrders = new List<UserOrder>();
             //each group is one order of a specific user
-            foreach (var group in allUserOrders.GroupBy(x => x.OrderId))
+            foreach (var group in allUserOrders.GroupBy(x => x.WebOrderId))
             {
                 DishWithCounter[] userOrderDishes = group
                     .Select(orderData => new DishWithCounter(orderData.DishId, orderData.Dish_name, orderData.Dish_description, orderData.Price, orderData.Dish_counter))
