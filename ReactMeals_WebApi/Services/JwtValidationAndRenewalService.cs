@@ -63,11 +63,10 @@
                     {
                         // The token is still valid, sleep
                         _managementApiAccessTokenValue = accessToken;
-                        TimeSpan sleepTime = ((DateTime)dateExpiry).Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
+                        TimeSpan sleepTime = (dateExpiry.Value).Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
                         if (sleepTime.Seconds > 0)
                             await Task.Delay(sleepTime, cancellationToken);
                     }
-
                 }
             }
         }

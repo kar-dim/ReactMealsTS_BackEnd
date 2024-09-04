@@ -48,25 +48,17 @@ namespace ReactMeals_WebApi.Services
         {
             try
             {
-                //kill existing ngrok
-                //taskkill / f / im ngrok.exe
+                //kill existing ngrok: taskkill / f / im ngrok.exe
                 await Cli.Wrap("taskkill")
-                        .WithArguments(args => args
-                        .Add("/f")
-                        .Add("/im")
-                        .Add("ngrok.exe"))
+                    .WithArguments(args => args.Add("/f").Add("/im").Add("ngrok.exe"))
                     .WithStandardOutputPipe(PipeTarget.ToDelegate(s => _logger.LogDebug(s)))
                     .WithStandardErrorPipe(PipeTarget.ToDelegate(s => _logger.LogError(s)))
                     .ExecuteAsync(stoppingToken);
             } catch (CommandExecutionException){ /*ignore, don't care if no ngrok processes are killed*/ }
 
+            //call ngrok
             var ngrokTask = Cli.Wrap("ngrok")
-                .WithArguments(args => args
-                    .Add("http")
-                    .Add("--domain="+ngrokUrl)
-                    .Add(localUrl)
-                    .Add("--log")
-                    .Add("stdout"))
+                .WithArguments(args => args.Add("http").Add("--domain=" + ngrokUrl).Add(localUrl).Add("--log").Add("stdout"))
                 .WithStandardOutputPipe(PipeTarget.ToDelegate(s => _logger.LogDebug(s)))
                 .WithStandardErrorPipe(PipeTarget.ToDelegate(s => _logger.LogError(s)))
                 .ExecuteAsync(stoppingToken);

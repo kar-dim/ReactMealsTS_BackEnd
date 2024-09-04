@@ -20,30 +20,16 @@ namespace ReactMeals_WebApi.DTO
 
     public class AddDishDTOMapping
     {
-        public static Dish DTOtoDish(AddDishDTO addDishDTO)
+        public static Dish AddDishDTOtoDish(AddDishDTO addDishDTO)
         {
             //Dish is incomplete after the DTO mapping,
             //must fill later dish_url and DishId returned from inserting into DB
-            return new Dish
-            {
-                Dish_description = addDishDTO.Dish_description,
-                Price = addDishDTO.Price,
-                Dish_extended_info = addDishDTO.Dish_description,
-                Dish_name = addDishDTO.Dish_name,
-
-            };
+            return new Dish(0, addDishDTO.Dish_name, addDishDTO.Dish_description, addDishDTO.Price, addDishDTO.Dish_description);
         }
 
-        public static Dish DTOwithIdtoDish(AddDishDTOWithId addDishDTO)
+        public static Dish AddDishDTOWithIdtoDish(AddDishDTOWithId addDishDTO)
         {
-            return new Dish
-            {
-                DishId = addDishDTO.DishId,
-                Dish_description = addDishDTO.Dish_description,
-                Price = addDishDTO.Price,
-                Dish_extended_info = addDishDTO.Dish_description,
-                Dish_name = addDishDTO.Dish_name,
-            };
+            return new Dish(addDishDTO.DishId, addDishDTO.Dish_name, addDishDTO.Dish_description, addDishDTO.Price, addDishDTO.Dish_description);
         }
     }
 }

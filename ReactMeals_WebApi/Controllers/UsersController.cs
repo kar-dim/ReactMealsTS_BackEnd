@@ -68,23 +68,13 @@ namespace ReactMeals_WebApi.Controllers
             foreach (Auth0UserDeserialize user in users)
             {
                 //only send users that have defined values (else skip them entirely)
-                if (!(user == null || user.email.IsNullOrEmpty() || user.user_id.IsNullOrEmpty() || user.user_metadata.name.IsNullOrEmpty() || user.user_metadata.last_name.IsNullOrEmpty() || user.user_metadata.address.IsNullOrEmpty()))
+                if (!(user == null || user.Email.IsNullOrEmpty() || user.UserId.IsNullOrEmpty() || user.UserMetadata.Name.IsNullOrEmpty() || user.UserMetadata.LastName.IsNullOrEmpty() || user.UserMetadata.Address.IsNullOrEmpty()))
                 {
                     //skip admin!
-                    if (!user.nickname.Equals("admin"))
-                    {
-                        usersToReturn.Add(new User
-                        {
-                            User_Id = user.user_id,
-                            Email = user.email,
-                            Name = user.user_metadata.name,
-                            LastName = user.user_metadata.last_name,
-                            Address = user.user_metadata.address
-                        });
-                    }
+                    if (!user.Nickname.Equals("admin"))
+                        usersToReturn.Add(new User(user.UserId, user.Email, user.UserMetadata.Name, user.UserMetadata.LastName, user.UserMetadata.Address));
                 }
             }
-
             return Ok(usersToReturn); //if empty it is still OK, client will handle it
         }
 
@@ -125,16 +115,7 @@ namespace ReactMeals_WebApi.Controllers
             request.AddHeader("Authorization", $"Bearer {mApiToken}");
             request.AddHeader("Content-Type", "application/json");
             request.AddHeader("Accept", "application/json");
-            string userJsonSerialize = JsonSerializer.Serialize(new Auth0UserSerialize
-            {
-                email = newUser.Email,
-                user_metadata = new UserMetadata
-                {
-                    name = newUser.Name,
-                    last_name = newUser.LastName,
-                    address = newUser.Address
-                }
-            });
+            string userJsonSerialize = JsonSerializer.Serialize(new Auth0UserSerialize(newUser.Email, new UserMetadata(newUser.Name, newUser.LastName, newUser.Address)));
             request.AddParameter("application/json", userJsonSerialize, ParameterType.RequestBody);
             var response = await client.ExecuteAsync(request);
             if (response == null || response.StatusCode != HttpStatusCode.OK || response.Content.IsNullOrEmpty())

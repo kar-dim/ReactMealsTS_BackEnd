@@ -4,6 +4,17 @@ namespace ReactMeals_WebApi.Models
 {
     public class User
     {
+        public User() { }
+
+        public User(string user_id, string email, string name, string lastName, string address)
+        {
+            User_Id = user_id;
+            Email = email;
+            Name = name;
+            LastName = lastName;
+            Address = address;
+        }
+
         [Key]
         public string User_Id { get; set; } //"user_id" from auth0
 

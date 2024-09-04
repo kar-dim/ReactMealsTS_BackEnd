@@ -6,7 +6,7 @@ using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
 using ReactMeals_WebApi.Services;
 using System.Security.Claims;
-using Order = ReactMeals_WebApi.Models.Order;
+using WebOrder = ReactMeals_WebApi.Models.WebOrder;
 
 namespace ReactMeals_WebApi.Controllers
 {
@@ -72,7 +72,7 @@ namespace ReactMeals_WebApi.Controllers
             //get the base64 dish image data
             byte[] imageBytes = Convert.FromBase64String(newDish.Dish_image_base64);
             //some very basic validation (magic bytes)
-            string extension = _imageValidationService.IsValidImageMagicBytes(imageBytes);
+            string extension = _imageValidationService.RetrieveImageExtension(imageBytes);
             if (extension == null)
             {
                 _logger.LogError("AddDish: Invalid image data");
@@ -81,7 +81,7 @@ namespace ReactMeals_WebApi.Controllers
 
             //now insert the dish into the db and receive the DishID returned
             string imageFileName = newDish.Dish_name.Trim().Replace(' ', '_').ToLower() + "." + extension;
-            Dish newDishToAdd = AddDishDTOMapping.DTOtoDish(newDish);
+            Dish newDishToAdd = AddDishDTOMapping.AddDishDTOtoDish(newDish);
             newDishToAdd.Dish_url = imageFileName;
 
             //add to cache and db
@@ -113,7 +113,7 @@ namespace ReactMeals_WebApi.Controllers
             //get the base64 dish image data
             byte[] imageBytes = Convert.FromBase64String(newDish.Dish_image_base64);
             //some very basic validation (magic bytes)
-            string extension = _imageValidationService.IsValidImageMagicBytes(imageBytes);
+            string extension = _imageValidationService.RetrieveImageExtension(imageBytes);
             if (extension == null)
             {
                 _logger.LogError("UpdateDish: Invalid Image Data");
@@ -121,7 +121,7 @@ namespace ReactMeals_WebApi.Controllers
             }
 
             string imageFileName = newDish.Dish_name.Trim().Replace(' ', '_').ToLower() + "." + extension;
-            Dish newDishToAdd = AddDishDTOMapping.DTOwithIdtoDish(newDish);
+            Dish newDishToAdd = AddDishDTOMapping.AddDishDTOWithIdtoDish(newDish);
             newDishToAdd.Dish_url = imageFileName;
 
             //add to cache and db
@@ -177,10 +177,10 @@ namespace ReactMeals_WebApi.Controllers
         //must be logged in -> usage of Authorize attribute (auth0 jwt checks)
         [HttpPost("Order")]
         [Authorize(AuthenticationSchemes = "Default")]
-        public async Task<ActionResult<Order>> CreateOrder([FromBody] OrderDTO webOrder)
+        public async Task<ActionResult<WebOrder>> CreateOrder([FromBody] WebOrderDTO webOrder)
         {
             Console.WriteLine("Order received");
-            if (webOrder == null || webOrder.order == null || webOrder.UserId == null || webOrder.order.Count == 0)
+            if (webOrder == null || webOrder.Order == null || webOrder.UserId == null || webOrder.Order.Count == 0)
             {
                 //wrong input data, something bad happened on CLIENT side -> 400
                 _logger.LogError("Order: Wrong Order Data");
@@ -188,7 +188,7 @@ namespace ReactMeals_WebApi.Controllers
             }
 
             decimal totalCost = 0.0m;
-            foreach (OrderItemDTO item in webOrder.order)
+            foreach (WebOrderItemDTO item in webOrder.Order)
             {
                 //if no orders in DB -> no need to check anything
                 decimal dishCost = _dishesCacheService.GetDishCost(item.DishId);
@@ -201,8 +201,8 @@ namespace ReactMeals_WebApi.Controllers
                 _logger.LogInformation("Dish Id: {0}, Dish Counter: {1}", item.DishId, item.Dish_counter);
             }
 
-            Order orderToInsert = OrderDTOMapping.DTOtoEntity(webOrder);
-            orderToInsert.totalCost = totalCost;
+            WebOrder orderToInsert = WebOrderDTOMapping.OrderDTOtoOrder(webOrder);
+            orderToInsert.TotalCost = totalCost;
 
             await _mainDbContext.AddAsync(orderToInsert);
             await _mainDbContext.SaveChangesAsync();
@@ -219,57 +219,33 @@ namespace ReactMeals_WebApi.Controllers
             Claim nameClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
             if (nameClaim == null || !nameClaim.Value.Equals(userId))
             {
-                _logger.LogError("GetUserOrders: Unauthorized User with userId: "+userId);
+                _logger.LogError("GetUserOrders: Unauthorized User with userId: {0}",userId);
                 return Unauthorized();
             }
             //search the OrderItem table to see if this user has any orders
-            var allUserOrdersQuery = from orderItem in _mainDbContext.OrderItems
+            var allUserOrders = await (from orderItem in _mainDbContext.OrderItems
                         join order in _mainDbContext.Orders on orderItem.OrderId equals order.Id
                         join dish in _mainDbContext.Dishes on orderItem.DishId equals dish.DishId
                         where order.UserId == userId
-                        select new
-                        {
-                            orderItem.Id,
-                            orderItem.OrderId,
-                            order.totalCost,
-                            orderItem.DishId,
-                            orderItem.Dish_counter,
-                            dish.Dish_name,
-                            dish.Dish_description,
-                            dish.Price
-                        };
+                        select new {
+                            order.TotalCost, orderItem.Id, orderItem.OrderId, orderItem.DishId, orderItem.Dish_counter,
+                            dish.Dish_name, dish.Dish_description, dish.Price
+                        }).ToListAsync();
 
-            var allUserOrders = await allUserOrdersQuery.ToListAsync();
             if (allUserOrders == null || allUserOrders.Count == 0)
-            {
-                return Ok(new UserOrdersDTO { orders = Array.Empty<UserOrder>() } ); //empty response -> user has no orders (technically not an error)
-            }
-            List<UserOrder> userOrderList = new List<UserOrder>();
-            //split the list into sublists, each group is one order of a specific user
+                return Ok(new UserOrdersDTO(Array.Empty<UserOrder>())); //empty response -> user has no orders (technically not an error)
+ 
+            List<UserOrder> userOrders = new List<UserOrder>();
+            //each group is one order of a specific user
             foreach (var group in allUserOrders.GroupBy(x => x.OrderId))
             {
-                int orderId = group.Key;
-                var groupSubList = group.ToList();
-                var tempList = new List<DishWithCounter>();
-                foreach (var dish in groupSubList)
-                {
-                    tempList.Add(new DishWithCounter { 
-                        DishId = dish.DishId, 
-                        Dish_description = dish.Dish_description,
-                        Dish_name = dish.Dish_name,
-                        Price = dish.Price,
-                        Dish_counter = dish.Dish_counter
-                    }); 
-                }
-                userOrderList.Add(new UserOrder
-                {
-                    Id = orderId,
-                    Dishes = tempList.ToArray(),
-                    TotalCost = groupSubList[0].totalCost
-                });
+                DishWithCounter[] userOrderDishes = group
+                    .Select(orderData => new DishWithCounter(orderData.DishId, orderData.Dish_name, orderData.Dish_description, orderData.Price, orderData.Dish_counter))
+                    .ToArray();
+                userOrders.Add(new UserOrder(group.Key, userOrderDishes, group.ToList()[0].TotalCost));
             }
             //send back the user's orders
-            return Ok(new UserOrdersDTO { orders = userOrderList.ToArray() });
+            return Ok(new UserOrdersDTO(userOrders.ToArray()));
         }
     }
 }

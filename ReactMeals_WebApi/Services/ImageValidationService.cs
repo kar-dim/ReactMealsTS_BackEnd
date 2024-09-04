@@ -1,8 +1,10 @@
-﻿namespace ReactMeals_WebApi.Services
+﻿using System;
+
+namespace ReactMeals_WebApi.Services
 {
     public interface IImageValidationService
     {
-        public string IsValidImageMagicBytes(byte[] imageData);
+        public string RetrieveImageExtension(byte[] imageData);
     }
     public class ImageValidationService : IImageValidationService {
 
@@ -17,20 +19,16 @@
                 { new byte[] { 0x42, 0x4D}, "bmp" }
             };
         }
-        public string IsValidImageMagicBytes(byte[] imageData)
+        public string RetrieveImageExtension(byte[] imageData)
         {
             if (imageData.Length < 32) //too small
                 return null;
-
-            // Magic bytes for different image formats
-
-            foreach (var magicByteExtensions in knownMagicBytes) 
+            ReadOnlySpan<byte> imageSpan = imageData;
+            foreach (var magicByte in knownMagicBytes)
             {
-                //if pattern match -> return OK
-                if (Enumerable.SequenceEqual(imageData.Take(magicByteExtensions.Key.Length), magicByteExtensions.Key))
-                    return magicByteExtensions.Value;
+                if (imageSpan.Length >= magicByte.Key.Length && imageSpan[..magicByte.Key.Length].SequenceEqual(magicByte.Key))
+                    return magicByte.Value;
             }
-
             return null;
         }
     }

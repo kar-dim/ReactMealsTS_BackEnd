@@ -41,7 +41,6 @@ namespace ReactMeals_WebApi.Services
                 _logger.LogInformation(_className + "No ManagementAPI Token found in db, fetching new...");
                 return (true, null, string.Empty); //no token found
             }
-            
             return (tokenFromDb.ExpiryDate <= DateTime.Now, tokenFromDb.ExpiryDate, tokenFromDb.TokenValue);
         }
 
