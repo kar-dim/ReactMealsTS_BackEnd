@@ -31,7 +31,7 @@ namespace ReactMeals_WebApi.Controllers
         [HttpGet("GetDish/{id:int}")]
         public ActionResult<Dish> GetDish(int id)
         {
-            Dish foundDish = _dishesCacheService.GetDish(id);
+            Dish foundDish = _dishesCacheService.GetDishById(id);
             if (foundDish == null)
             {
                 _logger.LogError("GetDish: Could not find dish with ID {0}", id);
@@ -46,14 +46,14 @@ namespace ReactMeals_WebApi.Controllers
         [HttpGet("GetDishes")]
         public ActionResult<IEnumerable<Dish>> GetDishes()
         {
-            List<Dish> foundDishes = _dishesCacheService.GetDishes();
-            if (foundDishes.Count == 0)
+            (List<Dish>, int) foundDishes = _dishesCacheService.GetDishes();
+            if (foundDishes.Item2 == 0)
             {
                 _logger.LogError("GetDishes: Could not find any dishes");
                 return NotFound();
             }
-            _logger.LogInformation("GetDishes: Returned all dishes. Length: {0}", foundDishes.Count);
-            return Ok(foundDishes);
+            _logger.LogInformation("GetDishes: Returned all dishes. Length: {0}", foundDishes.Item2);
+            return Ok(foundDishes.Item1);
         }
 
         //POST api/Dishes/AddDish
@@ -62,15 +62,9 @@ namespace ReactMeals_WebApi.Controllers
         [HttpPost("AddDish")]
         public async Task<ActionResult<Dish>> AddDish([FromBody] AddDishDTO newDish)
         {
-            //search in db(if exists-> return 409 CONFLICT)
+            //search in cache (if exists -> return 409 CONFLICT)
             //we don't have the ID yet, search by other parameters
-            var localDish = _dishesCacheService.GetDishes()
-                .Where(x => x.Dish_name.Equals(newDish.Dish_name))
-                .Where(x => x.Dish_description.Equals(newDish.Dish_description))
-                .Where(x => x.Price.Equals(newDish.Price))
-                .Where(x => x.Dish_extended_info.Equals(newDish.Dish_extended_info)).ToList();
-
-            if (localDish != null && localDish.Count > 0)
+            if (_dishesCacheService.GetDishByValues(newDish) != null)
             {
                 _logger.LogError("AddDish: Dish already exists");
                 return StatusCode(409, "Dish Already Exists");
@@ -87,14 +81,9 @@ namespace ReactMeals_WebApi.Controllers
 
             //now insert the dish into the db and receive the DishID returned
             string imageFileName = newDish.Dish_name.Trim().Replace(' ', '_').ToLower() + "." + extension;
-            Dish newDishToAdd = new Dish
-            {
-                Dish_name = newDish.Dish_name,
-                Dish_description = newDish.Dish_description,
-                Dish_extended_info = newDish.Dish_extended_info,
-                Price = newDish.Price,
-                Dish_url = imageFileName
-            };
+            Dish newDishToAdd = AddDishDTOMapping.DTOtoDish(newDish);
+            newDishToAdd.Dish_url = imageFileName;
+
             //add to cache and db
             _dishesCacheService.AddCacheEntry(newDishToAdd);
             await _mainDbContext.AddAsync(newDishToAdd);
@@ -112,7 +101,7 @@ namespace ReactMeals_WebApi.Controllers
         [HttpPut("UpdateDish")]
         public async Task<ActionResult<Dish>> UpdateDish([FromBody] AddDishDTOWithId newDish)
         {
-            Dish localDish = _dishesCacheService.GetDish(newDish.DishId);
+            Dish localDish = _dishesCacheService.GetDishById(newDish.DishId);
             if (localDish == null)
             {
                 _logger.LogError("UpdateDish: Dish With ID: " + newDish.DishId + " Not Found");
@@ -132,15 +121,8 @@ namespace ReactMeals_WebApi.Controllers
             }
 
             string imageFileName = newDish.Dish_name.Trim().Replace(' ', '_').ToLower() + "." + extension;
-            Dish newDishToAdd = new Dish
-            {
-                DishId = newDish.DishId, //set the ID so that update will work (else it will insert new row)
-                Dish_name = newDish.Dish_name,
-                Dish_description = newDish.Dish_description,
-                Dish_extended_info = newDish.Dish_extended_info,
-                Price = newDish.Price,
-                Dish_url = imageFileName
-            };
+            Dish newDishToAdd = AddDishDTOMapping.DTOwithIdtoDish(newDish);
+            newDishToAdd.Dish_url = imageFileName;
 
             //add to cache and db
             _dishesCacheService.UpdateCacheEntry(newDishToAdd);
@@ -166,7 +148,7 @@ namespace ReactMeals_WebApi.Controllers
         [HttpDelete("DeleteDish/{id:int}")]
         public async Task<ActionResult<Dish>> DeleteDish(int id)
         {
-            Dish localDish = _dishesCacheService.GetDish(id);
+            Dish localDish = _dishesCacheService.GetDishById(id);
             if (localDish == null)
             {
                 _logger.LogError("DeleteDish: Dish With ID: " + id + " Not Found");
@@ -283,7 +265,7 @@ namespace ReactMeals_WebApi.Controllers
                 {
                     Id = orderId,
                     Dishes = tempList.ToArray(),
-                    TotalCost = (decimal)groupSubList[0].totalCost
+                    TotalCost = groupSubList[0].totalCost
                 });
             }
             //send back the user's orders

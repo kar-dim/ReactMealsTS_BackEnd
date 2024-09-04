@@ -1,4 +1,5 @@
 ﻿using ReactMeals_WebApi.Contexts;
+using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
 
 namespace ReactMeals_WebApi.Services
@@ -32,7 +33,7 @@ namespace ReactMeals_WebApi.Services
             await Task.CompletedTask;
         }
 
-        public Dish GetDish(int dishId)
+        public Dish GetDishById(int dishId)
         {
             dishesCacheLock.EnterReadLock();
             try
@@ -45,12 +46,29 @@ namespace ReactMeals_WebApi.Services
             }
         }
 
-        public List<Dish> GetDishes()
+        public Dish GetDishByValues(AddDishDTO dish)
         {
             dishesCacheLock.EnterReadLock();
             try
             {
-                return _inMemoryDishes;
+                return _inMemoryDishes
+                .Where(x => x.Dish_name.Equals(dish.Dish_name))
+                .Where(x => x.Dish_description.Equals(dish.Dish_description))
+                .Where(x => x.Price.Equals(dish.Price))
+                .Where(x => x.Dish_extended_info.Equals(dish.Dish_extended_info)).FirstOrDefault();
+            }
+            finally
+            {
+                dishesCacheLock.ExitReadLock();
+            }
+        }
+
+        public (List<Dish>, int) GetDishes()
+        {
+            dishesCacheLock.EnterReadLock();
+            try
+            {
+                return (_inMemoryDishes, _inMemoryDishes.Count);
             }
             finally
             {
