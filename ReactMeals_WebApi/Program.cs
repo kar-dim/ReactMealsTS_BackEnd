@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using ReactMeals_WebApi.Contexts;
+using ReactMeals_WebApi.Repositories;
 using ReactMeals_WebApi.Services;
 using System.Security.Claims;
 
@@ -11,6 +12,12 @@ var builder = WebApplication.CreateBuilder(args);
 //db context (read connection string from appsettings)
 builder.Services.AddDbContext<MainDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("JimmysFoodzillaConnectionString")));
+//reposistories
+builder.Services.AddScoped<TokenRepository>();
+builder.Services.AddScoped<DishRepository>();
+builder.Services.AddScoped<OrderRepository>();
+builder.Services.AddScoped<OrderItemRepository>();
+builder.Services.AddScoped<UserRepository>();
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -72,6 +79,8 @@ builder.Services.AddHostedService(provider => provider.GetService<JwtValidationA
 //in-memory dishes service
 builder.Services.AddSingleton<DishesCacheService>();
 builder.Services.AddHostedService(provider => provider.GetService<DishesCacheService>());
+//user orders service
+builder.Services.AddScoped<OrderDbService>();
 
 var app = builder.Build();
 

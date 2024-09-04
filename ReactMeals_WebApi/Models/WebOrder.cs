@@ -5,7 +5,7 @@ namespace ReactMeals_WebApi.Models
 {
     public class WebOrderItem
     {
-        public int? Id { get; set; }
+        public int Id { get; set; }
         //foreign key to Dish
         public int DishId { get; set; }
         public Dish Dish { get; set; } //used by EF

@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using ReactMeals_WebApi.Contexts;
 using ReactMeals_WebApi.Models;
+using ReactMeals_WebApi.Repositories;
 using RestSharp;
 using System.Net;
 using System.Text.Json.Serialization;
@@ -21,13 +22,13 @@ namespace ReactMeals_WebApi.Services
     public class JwtService
     {
         private readonly string _className;
-        private readonly MainDbContext _mainDbContext;
+        private readonly TokenRepository _tokenRepository;
         private readonly ILogger<JwtService> _logger;
         private readonly IConfiguration _configuration;
-        public JwtService(MainDbContext mainDbContext, ILogger<JwtService> logger, IConfiguration congiguration)
+        public JwtService(TokenRepository tokenRepository, ILogger<JwtService> logger, IConfiguration congiguration)
         {
             _className = nameof(JwtService) + ": ";
-            _mainDbContext = mainDbContext;
+            _tokenRepository = tokenRepository;
             _logger = logger;
             _configuration = congiguration;
         }
@@ -35,7 +36,7 @@ namespace ReactMeals_WebApi.Services
         {
             //check if the current token is expired
             //Return true if expired, false otherwise
-            var tokenFromDb = await _mainDbContext.Tokens.Where(x => x.TokenType.Equals("M_API")).FirstOrDefaultAsync();
+            Token tokenFromDb = await _tokenRepository.GetManagementApiTokenAsync();
             if (tokenFromDb == null)
             {
                 _logger.LogInformation(_className + "No ManagementAPI Token found in db, fetching new...");
@@ -62,11 +63,9 @@ namespace ReactMeals_WebApi.Services
                 _logger.LogCritical(_className + "ManagementAPI Token is malformed! Check Auth0 configuration");
                 return (DateTime.Now, false, string.Empty); //let's consider it "expired" if no "exp" claim is found (it should never happen)
             }
-            
-            Token tokenFromDb = await _mainDbContext.Tokens.Where(x => x.TokenType == "M_API").FirstOrDefaultAsync();
-            if (tokenFromDb != null) {
-                _mainDbContext.Tokens.Remove(tokenFromDb);
-            }
+
+            //delete old token from db
+            await _tokenRepository.RemoveManagementApiTokenAsync();
 
             DateTime tokenExpireDateTime = DateTime.Now.AddSeconds(resp.ExpiresIn);
             Token newToken = new Token
@@ -77,9 +76,7 @@ namespace ReactMeals_WebApi.Services
             };
 
             //put to db
-            await _mainDbContext.Tokens.AddAsync(newToken);
-            await _mainDbContext.SaveChangesAsync();
-
+            await _tokenRepository.AddTokenAsync(newToken);
             _logger.LogInformation(_className + "Auth0 Management API Token successfully saved");
             return (tokenExpireDateTime, true, resp.AccessToken);
         }

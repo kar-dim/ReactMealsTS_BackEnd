@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using ReactMeals_WebApi.Contexts;
 using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
+using ReactMeals_WebApi.Repositories;
 using ReactMeals_WebApi.Services;
 using RestSharp;
 using System.Net;
@@ -19,14 +20,14 @@ namespace ReactMeals_WebApi.Controllers
         private readonly string _className;
         private readonly ILogger<UsersController> _logger;
         //private readonly OrdersDbContext _ordersDbContext;
-        private readonly MainDbContext _mainDbContext;
+        private readonly UserRepository _userRepository;
         private readonly JwtValidationAndRenewalService _jwtValidationAndRenewalService;
         private readonly IConfiguration _configuration;
 
-        public UsersController(MainDbContext mainDbContext, ILogger<UsersController> logger, JwtValidationAndRenewalService jwtValidationAndRenewalService, IConfiguration configuration)
+        public UsersController(UserRepository userRepository, ILogger<UsersController> logger, JwtValidationAndRenewalService jwtValidationAndRenewalService, IConfiguration configuration)
         {
             _className = nameof(UsersController) + ": ";
-            _mainDbContext = mainDbContext;
+            _userRepository = userRepository;
             _logger = logger;
             _jwtValidationAndRenewalService = jwtValidationAndRenewalService;
             _configuration = configuration;
@@ -85,13 +86,12 @@ namespace ReactMeals_WebApi.Controllers
         public async Task<ActionResult<User>> CreateUser([FromBody] User userToCreate)
         {
             _logger.LogInformation(_className + "New User Created [Sent from Auth0]: " + userToCreate.ToString());
-            if (await _mainDbContext.FindAsync<User>(new object[] { userToCreate.User_Id }) != null)
+            if (await _userRepository.UserExists(userToCreate))
             {
                 _logger.LogError(_className + "Error: User already exists");
                 return Problem("User Already Exists!");
             }
-            await _mainDbContext.AddAsync(userToCreate);
-            await _mainDbContext.SaveChangesAsync();
+            await _userRepository.AddAsync(userToCreate);
             return Ok(userToCreate);
         }
 

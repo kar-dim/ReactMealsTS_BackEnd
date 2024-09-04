@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using ReactMeals_WebApi.Contexts;
 using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
+using ReactMeals_WebApi.Repositories;
 using ReactMeals_WebApi.Services;
 using System.Security.Claims;
 using WebOrder = ReactMeals_WebApi.Models.WebOrder;
@@ -14,13 +14,19 @@ namespace ReactMeals_WebApi.Controllers
     [ApiController]
     public class DishesController : ControllerBase
     {
+        private readonly OrderDbService _orderDbService;
+        private readonly DishRepository _dishRepository;
+        private readonly OrderRepository _orderRepository;
+        private readonly OrderItemRepository _orderItemRepository;
         private readonly ILogger<DishesController> _logger;
-        private readonly MainDbContext _mainDbContext;
         private readonly IImageValidationService _imageValidationService;
         private readonly DishesCacheService _dishesCacheService;
-        public DishesController(ILogger<DishesController> logger, IImageValidationService imageValidationService, MainDbContext ordersDbContext, DishesCacheService dishesCacheService)
+        public DishesController(OrderDbService orderService, DishRepository dishRepository, OrderRepository orderRepository, OrderItemRepository orderItemRepository, ILogger<DishesController> logger, IImageValidationService imageValidationService, DishesCacheService dishesCacheService)
         {
-            _mainDbContext = ordersDbContext;
+            _orderDbService = orderService;
+            _dishRepository = dishRepository;
+            _orderRepository = orderRepository;
+            _orderItemRepository = orderItemRepository;
             _imageValidationService = imageValidationService;
             _logger = logger;
             _dishesCacheService = dishesCacheService;
@@ -86,8 +92,7 @@ namespace ReactMeals_WebApi.Controllers
 
             //add to cache and db
             _dishesCacheService.AddCacheEntry(newDishToAdd);
-            await _mainDbContext.AddAsync(newDishToAdd);
-            await _mainDbContext.SaveChangesAsync();
+            await _dishRepository.AddAsync(newDishToAdd);
             // Write image data to the static assets folder
             System.IO.File.WriteAllBytes(@"Images\" + imageFileName, imageBytes);
 
@@ -126,8 +131,8 @@ namespace ReactMeals_WebApi.Controllers
 
             //add to cache and db
             _dishesCacheService.UpdateCacheEntry(newDishToAdd);
-            _mainDbContext.Dishes.Update(newDishToAdd);
-            await _mainDbContext.SaveChangesAsync();
+            await _dishRepository.UpdateAsync(newDishToAdd);
+
             //delete old image and create new file
             try
             {
@@ -157,8 +162,7 @@ namespace ReactMeals_WebApi.Controllers
 
             //if found, remove from cache and db
             _dishesCacheService.DeleteCacheEntry(id);
-            _mainDbContext.Dishes.Remove(localDish);
-            await _mainDbContext.SaveChangesAsync();
+            await _dishRepository.RemoveAsync(localDish);
 
             //remove static image
             try
@@ -204,8 +208,7 @@ namespace ReactMeals_WebApi.Controllers
             WebOrder orderToInsert = WebOrderDTOMapping.OrderDTOtoOrder(webOrder);
             orderToInsert.TotalCost = totalCost;
 
-            await _mainDbContext.AddAsync(orderToInsert);
-            await _mainDbContext.SaveChangesAsync();
+            await _orderRepository.AddAsync(orderToInsert);
             //no errors -> 200 + empty body
             //TODO ->  201 + LOCATION REF HEADER the new obj? (there is no URI LOCATION though)
             return Ok();
@@ -223,16 +226,8 @@ namespace ReactMeals_WebApi.Controllers
                 return Unauthorized();
             }
             //search the OrderItem table to see if this user has any orders
-            var allUserOrders = await (from orderItem in _mainDbContext.OrderItems
-                        join order in _mainDbContext.Orders on orderItem.WebOrderId equals order.Id
-                        join dish in _mainDbContext.Dishes on orderItem.DishId equals dish.DishId
-                        where order.UserId == userId
-                        select new {
-                            order.TotalCost, orderItem.Id, orderItem.WebOrderId, orderItem.DishId, orderItem.Dish_counter,
-                            dish.Dish_name, dish.Dish_description, dish.Price
-                        }).ToListAsync();
-
-            if (allUserOrders == null || allUserOrders.Count == 0)
+            var allUserOrders = await _orderDbService.GetUserOrdersAsync(userId);
+            if (allUserOrders.Count == 0)
                 return Ok(new UserOrdersDTO(Array.Empty<UserOrder>())); //empty response -> user has no orders (technically not an error)
  
             List<UserOrder> userOrders = new List<UserOrder>();
