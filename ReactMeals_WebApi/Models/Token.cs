@@ -2,6 +2,13 @@
 {
     public class Token
     {
+        public Token() { }
+        public Token(string tokenValue, string tokenType, DateTime expiryDate)
+        {
+            TokenValue = tokenValue;
+            TokenType = tokenType;
+            ExpiryDate = expiryDate;
+        }
         public int TokenId { get; set; }
         //base64 encoded
         public string TokenValue {  get; set; }

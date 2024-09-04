@@ -12,15 +12,16 @@ namespace ReactMeals_WebApi.Repositories
         {
             _context = context;
         }
-        public async Task AddTokenAsync(Token token)
+        public async Task AddManagementApiTokenAsync(string tokenValue, DateTime expiryDate)
         {
+            Token token = new Token(tokenValue, MANAGEMENT_API, expiryDate);
             await _context.Tokens.AddAsync(token);
             await _context.SaveChangesAsync();
         }
 
         public async Task<Token> GetManagementApiTokenAsync()
         {
-            return await _context.Tokens.Where(x => x.TokenType.Equals(MANAGEMENT_API)).FirstOrDefaultAsync();
+            return await _context.Tokens.Where(token => token.TokenType.Equals(MANAGEMENT_API)).FirstOrDefaultAsync();
         }
 
         public async Task RemoveManagementApiTokenAsync()

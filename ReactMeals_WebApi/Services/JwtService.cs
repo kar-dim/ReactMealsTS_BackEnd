@@ -67,17 +67,11 @@ namespace ReactMeals_WebApi.Services
             //delete old token from db
             await _tokenRepository.RemoveManagementApiTokenAsync();
 
-            DateTime tokenExpireDateTime = DateTime.Now.AddSeconds(resp.ExpiresIn);
-            Token newToken = new Token
-            {
-                TokenValue = resp.AccessToken,
-                TokenType = "M_API",
-                ExpiryDate = tokenExpireDateTime
-            };
-
             //put to db
-            await _tokenRepository.AddTokenAsync(newToken);
+            DateTime tokenExpireDateTime = DateTime.Now.AddSeconds(resp.ExpiresIn);
+            await _tokenRepository.AddManagementApiTokenAsync(resp.AccessToken, tokenExpireDateTime);
             _logger.LogInformation(_className + "Auth0 Management API Token successfully saved");
+
             return (tokenExpireDateTime, true, resp.AccessToken);
         }
     }
