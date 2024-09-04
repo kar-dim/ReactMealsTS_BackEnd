@@ -45,9 +45,7 @@
 
                     //something bad happened while renewing (network error etc) -> wait some seconds and try again later
                     if (!success)
-                    {
                         await Task.Delay(20 * 1000, cancellationToken);
-                    }
                     else
                     {
                         // Calculate the time to sleep (minus 30 seconds)
@@ -57,16 +55,13 @@
                         await Task.Delay(sleepTime, cancellationToken);
                     }
                 }
-                else
+                else if (dateExpiry != null)
                 {
-                    if (dateExpiry != null)
-                    {
-                        // The token is still valid, sleep
-                        _managementApiAccessTokenValue = accessToken;
-                        TimeSpan sleepTime = (dateExpiry.Value).Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
-                        if (sleepTime.Seconds > 0)
-                            await Task.Delay(sleepTime, cancellationToken);
-                    }
+                    // The token is still valid, sleep
+                    _managementApiAccessTokenValue = accessToken;
+                    TimeSpan sleepTime = (dateExpiry.Value).Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
+                    if (sleepTime.Seconds > 0)
+                        await Task.Delay(sleepTime, cancellationToken);
                 }
             }
         }
