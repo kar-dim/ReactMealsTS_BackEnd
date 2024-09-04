@@ -40,24 +40,23 @@
                 // Check if the token is expired
                 if (isExpired)
                 {
-                    // Renew the token and get the expiration time
+                    //try to renew the token and get the expiration time
                     (DateTime tokenExpiration, bool success, string newAccessToken) = await jwtService.RenewToken();
 
                     //something bad happened while renewing (network error etc) -> wait some seconds and try again later
                     if (!success)
-                        await Task.Delay(20 * 1000, cancellationToken);
+                        await Task.Delay(TimeSpan.FromSeconds(20), cancellationToken);
                     else
                     {
-                        // Calculate the time to sleep (minus 30 seconds)
+                        //renew token and sleep until it's time to renew the token again
                         TimeSpan sleepTime = tokenExpiration.Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
                         _managementApiAccessTokenValue = newAccessToken;
-                        // Sleep until it's time to renew the token (plus some seconds)
                         await Task.Delay(sleepTime, cancellationToken);
                     }
                 }
+                // The token is still valid, sleep until renew time
                 else if (dateExpiry != null)
                 {
-                    // The token is still valid, sleep
                     _managementApiAccessTokenValue = accessToken;
                     TimeSpan sleepTime = (dateExpiry.Value).Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
                     if (sleepTime.Seconds > 0)
