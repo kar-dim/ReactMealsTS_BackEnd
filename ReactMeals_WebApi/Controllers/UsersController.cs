@@ -39,7 +39,7 @@ namespace ReactMeals_WebApi.Controllers
         public async Task<ActionResult<List<User>>> GetUsers()
         {
             //check ManagementAPI token if exists from the injected service
-            string mApiToken = _jwtValidationAndRenewalService.ManagementApiAccessTokenValue;
+            string mApiToken = _jwtValidationAndRenewalService.ManagementApiToken;
             if (mApiToken.IsNullOrEmpty())
             {
                 _logger.LogError(_className + "ManagementAPI Token does not exist");
@@ -102,7 +102,7 @@ namespace ReactMeals_WebApi.Controllers
         public async Task<ActionResult<User>> UpdateUser([FromBody] User newUser)
         {
             //check ManagementAPI token if exists from the injected service
-            string mApiToken = _jwtValidationAndRenewalService.ManagementApiAccessTokenValue;
+            string mApiToken = _jwtValidationAndRenewalService.ManagementApiToken;
             if (mApiToken.IsNullOrEmpty())
             {
                 _logger.LogError(_className + "ManagementAPI Token does not exist");
@@ -133,7 +133,7 @@ namespace ReactMeals_WebApi.Controllers
         public async Task<ActionResult<User>> DeleteUser(string userId)
         {
             //check ManagementAPI token if exists from the injected service
-            string mApiToken = _jwtValidationAndRenewalService.ManagementApiAccessTokenValue;
+            string mApiToken = _jwtValidationAndRenewalService.ManagementApiToken;
             if (mApiToken.IsNullOrEmpty())
             {
                 _logger.LogError(_className + "ManagementAPI Token does not exist");

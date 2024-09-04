@@ -7,7 +7,7 @@
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly ILogger<JwtValidationAndRenewalService> _logger;
         private string _managementApiAccessTokenValue; //the token value that is saved to db (so that we won't ask the db all the time for the token)
-        public string ManagementApiAccessTokenValue
+        public string ManagementApiToken
         {
             get { return _managementApiAccessTokenValue; }
             set { _managementApiAccessTokenValue = value; }

@@ -66,7 +66,7 @@ builder.Services.AddSingleton<IImageValidationService, ImageValidationService>()
 if (builder.Environment.IsDevelopment())
     builder.Services.AddHostedService<NgrokTunnelService>();
 //Auth0 Management API JWT Token Renewal Service
-builder.Services.AddScoped<JwtService>(); // Add this line to register JwtService
+builder.Services.AddScoped<JwtService>();
 builder.Services.AddSingleton<JwtValidationAndRenewalService>();
 builder.Services.AddHostedService(provider => provider.GetService<JwtValidationAndRenewalService>());
 //in-memory dishes service

@@ -23,18 +23,8 @@ namespace ReactMeals_WebApi.Services
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             await WaitForApplicationStarted();
-
-            var urls = _server.Features.Get<IServerAddressesFeature>()!.Addresses;
-            var localUrl = urls.Single(u => u.StartsWith("http://"));
-            var ngrokDomain = _config["ngrok:url"];
-            _logger.LogInformation("Starting ngrok tunnel for {LocalUrl}", localUrl);
-            var ngrokTask = StartNgrokTunnel(localUrl, ngrokDomain, stoppingToken);
-
-            _logger.LogInformation("Public ngrok URL: {NgrokPublicUrl}", ngrokDomain);
-
-            await ngrokTask;
-
-            _logger.LogInformation("Ngrok tunnel stopped");
+            string localUrl = _server.Features.Get<IServerAddressesFeature>().Addresses.Single(u => u.StartsWith("http://"));
+            await StartNgrokTunnelAsync(localUrl, _config["ngrok:url"], stoppingToken);
         }
 
         private Task WaitForApplicationStarted()
@@ -44,7 +34,7 @@ namespace ReactMeals_WebApi.Services
             return completionSource.Task;
         }
 
-        private async Task<CommandTask<CommandResult>> StartNgrokTunnel(string localUrl, string ngrokUrl, CancellationToken stoppingToken)
+        private async Task StartNgrokTunnelAsync(string localUrl, string ngrokUrl, CancellationToken stoppingToken)
         {
             try
             {
@@ -54,15 +44,24 @@ namespace ReactMeals_WebApi.Services
                     .WithStandardOutputPipe(PipeTarget.ToDelegate(s => _logger.LogDebug(s)))
                     .WithStandardErrorPipe(PipeTarget.ToDelegate(s => _logger.LogError(s)))
                     .ExecuteAsync(stoppingToken);
-            } catch (CommandExecutionException){ /*ignore, don't care if no ngrok processes are killed*/ }
+                _logger.LogInformation("Killed ngrok service...");
+                await Task.Delay(3000, stoppingToken);
+            } catch (CommandExecutionException) {
+                _logger.LogInformation("No existing Ngrok tunnel is running...");
+            }
 
-            //call ngrok
-            var ngrokTask = Cli.Wrap("ngrok")
-                .WithArguments(args => args.Add("http").Add("--domain=" + ngrokUrl).Add(localUrl).Add("--log").Add("stdout"))
-                .WithStandardOutputPipe(PipeTarget.ToDelegate(s => _logger.LogDebug(s)))
-                .WithStandardErrorPipe(PipeTarget.ToDelegate(s => _logger.LogError(s)))
-                .ExecuteAsync(stoppingToken);
-            return ngrokTask;
+            _logger.LogInformation("Starting ngrok tunnel for {0}", localUrl);
+            try
+            {
+                //call ngrok
+                await Cli.Wrap("ngrok")
+                    .WithArguments(args => args.Add("http").Add("--domain=" + ngrokUrl).Add(localUrl).Add("--log").Add("stdout"))
+                    .WithStandardOutputPipe(PipeTarget.ToDelegate(s => _logger.LogDebug(s)))
+                    .WithStandardErrorPipe(PipeTarget.ToDelegate(s => _logger.LogError(s)))
+                    .ExecuteAsync(stoppingToken);
+            } catch (CommandExecutionException) {
+                _logger.LogError("Could not start ngrok!");
+            }
         }
     }
 }

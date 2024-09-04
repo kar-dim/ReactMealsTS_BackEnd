@@ -24,12 +24,12 @@ namespace ReactMeals_WebApi.DTO
         {
             //Dish is incomplete after the DTO mapping,
             //must fill later dish_url and DishId returned from inserting into DB
-            return new Dish(0, addDishDTO.Dish_name, addDishDTO.Dish_description, addDishDTO.Price, addDishDTO.Dish_description);
+            return new Dish(0, addDishDTO.Dish_name, addDishDTO.Dish_description, addDishDTO.Price, addDishDTO.Dish_extended_info);
         }
 
         public static Dish AddDishDTOWithIdtoDish(AddDishDTOWithId addDishDTO)
         {
-            return new Dish(addDishDTO.DishId, addDishDTO.Dish_name, addDishDTO.Dish_description, addDishDTO.Price, addDishDTO.Dish_description);
+            return new Dish(addDishDTO.DishId, addDishDTO.Dish_name, addDishDTO.Dish_description, addDishDTO.Price, addDishDTO.Dish_extended_info);
         }
     }
 }
