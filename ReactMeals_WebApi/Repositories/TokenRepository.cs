@@ -14,8 +14,7 @@ namespace ReactMeals_WebApi.Repositories
         }
         public async Task AddManagementApiTokenAsync(string tokenValue, DateTime expiryDate)
         {
-            Token token = new Token(tokenValue, MANAGEMENT_API, expiryDate);
-            await _context.Tokens.AddAsync(token);
+            _context.Tokens.Add(new Token(tokenValue, MANAGEMENT_API, expiryDate));
             await _context.SaveChangesAsync();
         }
 

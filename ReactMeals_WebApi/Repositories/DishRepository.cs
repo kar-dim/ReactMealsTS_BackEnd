@@ -13,7 +13,7 @@ namespace ReactMeals_WebApi.Repositories
 
         public async Task AddAsync(Dish dish)
         {
-            await _context.Dishes.AddAsync(dish);
+            _context.Dishes.Add(dish);
             await _context.SaveChangesAsync();
         }
 

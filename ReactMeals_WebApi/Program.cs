@@ -16,7 +16,6 @@ builder.Services.AddDbContext<MainDbContext>(options =>
 builder.Services.AddScoped<TokenRepository>();
 builder.Services.AddScoped<DishRepository>();
 builder.Services.AddScoped<OrderRepository>();
-builder.Services.AddScoped<OrderItemRepository>();
 builder.Services.AddScoped<UserRepository>();
 
 // Add services to the container.

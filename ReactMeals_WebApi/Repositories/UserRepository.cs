@@ -18,7 +18,7 @@ namespace ReactMeals_WebApi.Repositories
         }
         public async Task AddAsync(User user)
         {
-            await _context.Users.AddAsync(user);
+            _context.Users.Add(user);
             await _context.SaveChangesAsync();
         }
     }

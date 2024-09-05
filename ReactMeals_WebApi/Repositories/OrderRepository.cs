@@ -13,7 +13,7 @@ namespace ReactMeals_WebApi.Repositories
 
         public async Task AddAsync(WebOrder order)
         {
-            await _context.Orders.AddAsync(order);
+            _context.Orders.Add(order);
             await _context.SaveChangesAsync();
         }
         public IQueryable<WebOrder> GetOrders()

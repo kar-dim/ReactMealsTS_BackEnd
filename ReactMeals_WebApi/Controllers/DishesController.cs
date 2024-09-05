@@ -16,16 +16,14 @@ namespace ReactMeals_WebApi.Controllers
         private readonly OrderDbService _orderDbService;
         private readonly DishRepository _dishRepository;
         private readonly OrderRepository _orderRepository;
-        private readonly OrderItemRepository _orderItemRepository;
         private readonly ILogger<DishesController> _logger;
         private readonly ImageValidationService _imageValidationService;
         private readonly DishesCacheService _dishesCacheService;
-        public DishesController(OrderDbService orderService, DishRepository dishRepository, OrderRepository orderRepository, OrderItemRepository orderItemRepository, ILogger<DishesController> logger, ImageValidationService imageValidationService, DishesCacheService dishesCacheService)
+        public DishesController(OrderDbService orderService, DishRepository dishRepository, OrderRepository orderRepository, ILogger<DishesController> logger, ImageValidationService imageValidationService, DishesCacheService dishesCacheService)
         {
             _orderDbService = orderService;
             _dishRepository = dishRepository;
             _orderRepository = orderRepository;
-            _orderItemRepository = orderItemRepository;
             _imageValidationService = imageValidationService;
             _logger = logger;
             _dishesCacheService = dishesCacheService;
