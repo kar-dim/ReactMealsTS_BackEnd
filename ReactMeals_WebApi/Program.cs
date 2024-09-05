@@ -28,8 +28,9 @@ builder.Services.AddEndpointsApiExplorer();
 var allowFrontendOnly = "allowFrontendOnly";
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(name: allowFrontendOnly, 
-        policy => {  
+    options.AddPolicy(name: allowFrontendOnly,
+        policy =>
+        {
             policy.WithOrigins("http://localhost:3000", "https://react-meals-ts-front-end.vercel.app");
             policy.AllowAnyMethod();
             policy.WithHeaders("X-Requested-With", "Content-Type", "Authorization", "ngrok-skip-browser-warning");
@@ -47,8 +48,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         NameClaimType = ClaimTypes.NameIdentifier
     };
-//authorization scheme when the M2M Auth0 API sends us the post-register action data
-//it uses different access tokens than the main application
+    //authorization scheme when the M2M Auth0 API sends us the post-register action data
+    //it uses different access tokens than the main application
 }).AddJwtBearer("M2M_UserRegister", options =>
 {
     options.Authority = $"https://{builder.Configuration["Auth0:M2M_Domain"]}/";
@@ -67,8 +68,9 @@ builder.Services.AddAuthorization(options =>
           policy.RequireClaim("permissions", "admin:admin"));
 });
 
-//our custom services
-builder.Services.AddSingleton<IImageValidationService, ImageValidationService>();
+/* custom services */
+//service that checks if the provided byte stream is an image file
+builder.Services.AddSingleton<ImageValidationService>();
 //ngrok
 if (builder.Environment.IsDevelopment())
     builder.Services.AddHostedService<NgrokTunnelService>();

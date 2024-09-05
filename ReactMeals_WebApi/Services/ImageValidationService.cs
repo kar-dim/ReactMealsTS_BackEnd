@@ -1,24 +1,15 @@
-﻿using System;
-
-namespace ReactMeals_WebApi.Services
+﻿namespace ReactMeals_WebApi.Services
 {
-    public interface IImageValidationService
+    public class ImageValidationService
     {
-        public string RetrieveImageExtension(byte[] imageData);
-    }
-    public class ImageValidationService : IImageValidationService {
 
-        private static readonly Dictionary<byte[], string> knownMagicBytes;
-        static ImageValidationService() 
+        private static readonly Dictionary<byte[], string> knownMagicBytes = new()
         {
-            knownMagicBytes = new Dictionary<byte[], string>()
-            {
-                { new byte[] { 0xFF, 0xD8, 0xFF }, "jpg" },
-                { new byte[] { 0x89, 0x50, 0x4E, 0x47 }, "png" },
-                { new byte[] { 0x47, 0x49, 0x46, 0x38 }, "gif" },
-                { new byte[] { 0x42, 0x4D}, "bmp" }
-            };
-        }
+            { new byte[] { 0xFF, 0xD8, 0xFF }, "jpg" },
+            { new byte[] { 0x89, 0x50, 0x4E, 0x47 }, "png" },
+            { new byte[] { 0x47, 0x49, 0x46, 0x38 }, "gif" },
+            { new byte[] { 0x42, 0x4D}, "bmp" }
+        };
         public string RetrieveImageExtension(byte[] imageData)
         {
             if (imageData.Length < 32) //too small

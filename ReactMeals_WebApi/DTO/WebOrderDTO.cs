@@ -8,7 +8,7 @@ namespace ReactMeals_WebApi.DTO
         public int DishId { get; set; }
         public int Dish_counter { get; set; }
     }
-    
+
     public class WebOrderDTO
     {
         [JsonPropertyName("order")]
@@ -25,7 +25,7 @@ namespace ReactMeals_WebApi.DTO
                 DishId = order.DishId,
                 Dish_counter = order.Dish_counter,
             }).ToList();
-            return new WebOrder { Order = items, UserId = orderDTO.UserId};
+            return new WebOrder { Order = items, UserId = orderDTO.UserId };
         }
     }
 }

@@ -2,7 +2,6 @@
 {
     public class JwtValidationAndRenewalService : IHostedService, IDisposable
     {
-        private readonly string _className;
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly CancellationTokenSource _cancellationTokenSource;
         private readonly ILogger<JwtValidationAndRenewalService> _logger;
@@ -14,7 +13,6 @@
         }
         public JwtValidationAndRenewalService(IServiceScopeFactory scopeFactory, ILogger<JwtValidationAndRenewalService> logger)
         {
-            _className = nameof(JwtValidationAndRenewalService) + ": ";
             _cancellationTokenSource = new CancellationTokenSource();
             _scopeFactory = scopeFactory;
             _logger = logger;
@@ -30,7 +28,7 @@
 
         private async Task RenewTokenLoop(CancellationToken cancellationToken)
         {
-            _logger.LogInformation(_className + "PerformTask called");
+            _logger.LogInformation("PerformTask called");
             var jwtService = _scopeFactory.CreateScope().ServiceProvider.GetRequiredService<JwtService>();
 
             while (!cancellationToken.IsCancellationRequested)

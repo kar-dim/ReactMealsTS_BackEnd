@@ -14,7 +14,8 @@ namespace ReactMeals_WebApi.Models
             Price = price;
         }
         public Dish(int dishId, string dishName, string dishDescription, decimal price, string dishExtendedInfo)
-        : this(dishId, dishName, dishDescription, price) {
+        : this(dishId, dishName, dishDescription, price)
+        {
             Dish_extended_info = dishExtendedInfo;
         }
         [Key]
@@ -30,7 +31,7 @@ namespace ReactMeals_WebApi.Models
     public class DishWithCounter : Dish
     {
         public DishWithCounter() { }
-        public DishWithCounter(int dishId, string dishName, string dishDescription, decimal price, int dishCounter) 
+        public DishWithCounter(int dishId, string dishName, string dishDescription, decimal price, int dishCounter)
             : base(dishId, dishName, dishDescription, price)
         {
             Dish_counter = dishCounter;

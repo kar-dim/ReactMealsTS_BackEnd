@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
 using ReactMeals_WebApi.Repositories;
@@ -19,9 +18,9 @@ namespace ReactMeals_WebApi.Controllers
         private readonly OrderRepository _orderRepository;
         private readonly OrderItemRepository _orderItemRepository;
         private readonly ILogger<DishesController> _logger;
-        private readonly IImageValidationService _imageValidationService;
+        private readonly ImageValidationService _imageValidationService;
         private readonly DishesCacheService _dishesCacheService;
-        public DishesController(OrderDbService orderService, DishRepository dishRepository, OrderRepository orderRepository, OrderItemRepository orderItemRepository, ILogger<DishesController> logger, IImageValidationService imageValidationService, DishesCacheService dishesCacheService)
+        public DishesController(OrderDbService orderService, DishRepository dishRepository, OrderRepository orderRepository, OrderItemRepository orderItemRepository, ILogger<DishesController> logger, ImageValidationService imageValidationService, DishesCacheService dishesCacheService)
         {
             _orderDbService = orderService;
             _dishRepository = dishRepository;
@@ -40,10 +39,10 @@ namespace ReactMeals_WebApi.Controllers
             Dish foundDish = _dishesCacheService.GetDishById(id);
             if (foundDish == null)
             {
-                _logger.LogError("GetDish: Could not find dish with ID {0}", id);
+                _logger.LogError("GetDish: Could not find dish with ID {Id}", id);
                 return NotFound();
             }
-            _logger.LogInformation("GetDish: Found dish with ID {0}", id);
+            _logger.LogInformation("GetDish: Found dish with ID {Id}",id);
             return Ok(foundDish);
         }
 
@@ -58,7 +57,7 @@ namespace ReactMeals_WebApi.Controllers
                 _logger.LogError("GetDishes: Could not find any dishes");
                 return NotFound();
             }
-            _logger.LogInformation("GetDishes: Returned all dishes. Length: {0}", foundDishes.Item2);
+            _logger.LogInformation("GetDishes: Returned all dishes. Length: {Length}", foundDishes.Item2);
             return Ok(foundDishes.Item1);
         }
 
@@ -109,7 +108,7 @@ namespace ReactMeals_WebApi.Controllers
             Dish localDish = _dishesCacheService.GetDishById(newDish.DishId);
             if (localDish == null)
             {
-                _logger.LogError("UpdateDish: Dish With ID: " + newDish.DishId + " Not Found");
+                _logger.LogError("UpdateDish: Dish With ID: {DishId} Not Found", newDish.DishId);
                 return NotFound("Dish With ID: " + newDish.DishId + " Not Found");
             }
             //get old image url file
@@ -156,7 +155,7 @@ namespace ReactMeals_WebApi.Controllers
             Dish localDish = _dishesCacheService.GetDishById(id);
             if (localDish == null)
             {
-                _logger.LogError("DeleteDish: Dish With ID: " + id + " Not Found");
+                _logger.LogError("DeleteDish: Dish With ID: {Id} Not Found", id);
                 return NotFound("Dish With ID: " + id + " Not Found");
             }
 
@@ -168,7 +167,8 @@ namespace ReactMeals_WebApi.Controllers
             try
             {
                 System.IO.File.Delete(@"Images\" + localDish.Dish_url);
-            } catch (Exception)
+            }
+            catch (Exception)
             {
                 //it's ok, not something serious
                 _logger.LogError("DeleteDish: Could not remove static dish image");
@@ -202,7 +202,7 @@ namespace ReactMeals_WebApi.Controllers
                     return NotFound("At least one Dish ID does not exist!");
                 }
                 totalCost += dishCost * item.Dish_counter;
-                _logger.LogInformation("Dish Id: {0}, Dish Counter: {1}", item.DishId, item.Dish_counter);
+                _logger.LogInformation("Dish Id: {DishId}, Dish Counter: {Dish_counter}", item.DishId, item.Dish_counter);
             }
 
             WebOrder orderToInsert = WebOrderDTOMapping.OrderDTOtoOrder(webOrder);
@@ -222,14 +222,14 @@ namespace ReactMeals_WebApi.Controllers
             Claim nameClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
             if (nameClaim == null || !nameClaim.Value.Equals(userId))
             {
-                _logger.LogError("GetUserOrders: Unauthorized User with userId: {0}",userId);
+                _logger.LogError("GetUserOrders: Unauthorized User with userId: {UserId}", userId);
                 return Unauthorized();
             }
             //search the OrderItem table to see if this user has any orders
             var allUserOrders = await _orderDbService.GetUserOrdersAsync(userId);
             if (allUserOrders.Count == 0)
                 return Ok(new UserOrdersDTO(Array.Empty<UserOrder>())); //empty response -> user has no orders (technically not an error)
- 
+
             List<UserOrder> userOrders = new List<UserOrder>();
             //each group is one order of a specific user
             foreach (var group in allUserOrders.GroupBy(x => x.WebOrderId))

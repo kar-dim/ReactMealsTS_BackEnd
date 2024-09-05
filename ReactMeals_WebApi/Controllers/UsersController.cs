@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
-using ReactMeals_WebApi.Contexts;
 using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
 using ReactMeals_WebApi.Repositories;
@@ -17,7 +16,6 @@ namespace ReactMeals_WebApi.Controllers
     [ApiController]
     public class UsersController : ControllerBase
     {
-        private readonly string _className;
         private readonly ILogger<UsersController> _logger;
         //private readonly OrdersDbContext _ordersDbContext;
         private readonly UserRepository _userRepository;
@@ -26,7 +24,6 @@ namespace ReactMeals_WebApi.Controllers
 
         public UsersController(UserRepository userRepository, ILogger<UsersController> logger, JwtValidationAndRenewalService jwtValidationAndRenewalService, IConfiguration configuration)
         {
-            _className = nameof(UsersController) + ": ";
             _userRepository = userRepository;
             _logger = logger;
             _jwtValidationAndRenewalService = jwtValidationAndRenewalService;
@@ -43,7 +40,7 @@ namespace ReactMeals_WebApi.Controllers
             string mApiToken = _jwtValidationAndRenewalService.ManagementApiToken;
             if (mApiToken.IsNullOrEmpty())
             {
-                _logger.LogError(_className + "ManagementAPI Token does not exist");
+                _logger.LogError("ManagementAPI Token does not exist");
                 return Problem("Internal Problem");
             }
 
@@ -54,7 +51,7 @@ namespace ReactMeals_WebApi.Controllers
             var response = await client.ExecuteAsync(request);
             if (response == null || response.StatusCode != HttpStatusCode.OK || response.Content.IsNullOrEmpty())
             {
-                _logger.LogError(_className + "Error in getting users info from api/v2/users");
+                _logger.LogError("Error in getting users info from api/v2/users");
                 return Problem("INTERNAL ERROR");
             }
 
@@ -62,7 +59,7 @@ namespace ReactMeals_WebApi.Controllers
             List<User> usersToReturn = new List<User>();
             if (users == null || users.Count == 0)
             {
-                _logger.LogError(_className + "Users returned are malformed! Check Auth0 configuration");
+                _logger.LogError("Users returned are malformed! Check Auth0 configuration");
                 return Problem("INTERNAL ERROR");
             }
 
@@ -85,10 +82,10 @@ namespace ReactMeals_WebApi.Controllers
         [Authorize(AuthenticationSchemes = "M2M_UserRegister")]
         public async Task<ActionResult<User>> CreateUser([FromBody] User userToCreate)
         {
-            _logger.LogInformation(_className + "New User Created [Sent from Auth0]: " + userToCreate.ToString());
+            _logger.LogInformation("New User Created [Sent from Auth0]: {User}", userToCreate.ToString());
             if (await _userRepository.UserExists(userToCreate))
             {
-                _logger.LogError(_className + "Error: User already exists");
+                _logger.LogError("Error: User already exists");
                 return Problem("User Already Exists!");
             }
             await _userRepository.AddAsync(userToCreate);
@@ -105,7 +102,7 @@ namespace ReactMeals_WebApi.Controllers
             string mApiToken = _jwtValidationAndRenewalService.ManagementApiToken;
             if (mApiToken.IsNullOrEmpty())
             {
-                _logger.LogError(_className + "ManagementAPI Token does not exist");
+                _logger.LogError("ManagementAPI Token does not exist");
                 return Problem("Internal Problem");
             }
 
@@ -120,7 +117,7 @@ namespace ReactMeals_WebApi.Controllers
             var response = await client.ExecuteAsync(request);
             if (response == null || response.StatusCode != HttpStatusCode.OK || response.Content.IsNullOrEmpty())
             {
-                _logger.LogError(_className + "Error in patching user from api/v2/users");
+                _logger.LogError("Error in patching user from api/v2/users");
                 return Problem("INTERNAL ERROR");
             }
             return Ok();
@@ -136,7 +133,7 @@ namespace ReactMeals_WebApi.Controllers
             string mApiToken = _jwtValidationAndRenewalService.ManagementApiToken;
             if (mApiToken.IsNullOrEmpty())
             {
-                _logger.LogError(_className + "ManagementAPI Token does not exist");
+                _logger.LogError("ManagementAPI Token does not exist");
                 return Problem("Internal Problem");
             }
 
@@ -148,7 +145,7 @@ namespace ReactMeals_WebApi.Controllers
             //DELETE OK status is 204
             if (response == null || response.StatusCode != HttpStatusCode.NoContent)
             {
-                _logger.LogError(_className + "Error in deleting user from api/v2/users");
+                _logger.LogError("Error in deleting user from api/v2/users");
                 return Problem("INTERNAL ERROR");
             }
             return Ok();

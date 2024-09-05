@@ -20,9 +20,9 @@ namespace ReactMeals_WebApi.Models
 
         [Precision(18, 2)]
         [JsonPropertyName("totalCost")]
-        public decimal TotalCost {  get; set; }
+        public decimal TotalCost { get; set; }
         [JsonPropertyName("order")]
-        public ICollection<WebOrderItem> Order { get; set; }  
+        public ICollection<WebOrderItem> Order { get; set; }
         public User User { get; set; } //used by EF
         public string UserId { get; set; } //foreign key to User (auto-discovered by EF because of <Name> + <Id>)
     }

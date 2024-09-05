@@ -82,7 +82,7 @@ namespace ReactMeals_WebApi.Services
             try
             {
                 var dishInCache = _inMemoryDishes.Find(dish => dish.DishId == dishId);
-                return dishInCache == null ? -1 : dishInCache.Price; 
+                return dishInCache == null ? -1 : dishInCache.Price;
             }
             finally
             {

@@ -1,7 +1,7 @@
 ﻿using CliWrap;
-using Microsoft.AspNetCore.Hosting.Server.Features;
-using Microsoft.AspNetCore.Hosting.Server;
 using CliWrap.Exceptions;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 
 namespace ReactMeals_WebApi.Services
 {
@@ -46,11 +46,13 @@ namespace ReactMeals_WebApi.Services
                     .ExecuteAsync(stoppingToken);
                 _logger.LogInformation("Killed ngrok service...");
                 await Task.Delay(3000, stoppingToken);
-            } catch (CommandExecutionException) {
+            }
+            catch (CommandExecutionException)
+            {
                 _logger.LogInformation("No existing Ngrok tunnel is running...");
             }
 
-            _logger.LogInformation("Starting ngrok tunnel for {0}", localUrl);
+            _logger.LogInformation("Starting ngrok tunnel for {LocalUrl}", localUrl);
             try
             {
                 //call ngrok
@@ -59,7 +61,9 @@ namespace ReactMeals_WebApi.Services
                     .WithStandardOutputPipe(PipeTarget.ToDelegate(s => _logger.LogDebug(s)))
                     .WithStandardErrorPipe(PipeTarget.ToDelegate(s => _logger.LogError(s)))
                     .ExecuteAsync(stoppingToken);
-            } catch (CommandExecutionException) {
+            }
+            catch (CommandExecutionException)
+            {
                 _logger.LogError("Could not start ngrok!");
             }
         }
