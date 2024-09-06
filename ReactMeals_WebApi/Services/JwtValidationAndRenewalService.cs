@@ -1,78 +1,67 @@
-﻿namespace ReactMeals_WebApi.Services
+﻿namespace ReactMeals_WebApi.Services;
+
+public class JwtValidationAndRenewalService(IServiceScopeFactory serviceScopeFactory, ILogger<JwtValidationAndRenewalService> logger) : IHostedService, IDisposable
 {
-    public class JwtValidationAndRenewalService : IHostedService, IDisposable
+    private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+    private readonly JwtService _jwtService = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<JwtService>();
+    private string _managementApiAccessTokenValue = string.Empty; //the token value that is saved to db (so that we won't ask the db all the time for the token)
+    public string ManagementApiToken
     {
-        private readonly IServiceScopeFactory _scopeFactory;
-        private readonly CancellationTokenSource _cancellationTokenSource;
-        private readonly ILogger<JwtValidationAndRenewalService> _logger;
-        private string _managementApiAccessTokenValue; //the token value that is saved to db (so that we won't ask the db all the time for the token)
-        public string ManagementApiToken
-        {
-            get { return _managementApiAccessTokenValue; }
-            set { _managementApiAccessTokenValue = value; }
-        }
-        public JwtValidationAndRenewalService(IServiceScopeFactory scopeFactory, ILogger<JwtValidationAndRenewalService> logger)
-        {
-            _cancellationTokenSource = new CancellationTokenSource();
-            _scopeFactory = scopeFactory;
-            _logger = logger;
-            _managementApiAccessTokenValue = string.Empty;
-        }
+        get { return _managementApiAccessTokenValue; }
+        set { _managementApiAccessTokenValue = value; }
+    }
 
-        public Task StartAsync(CancellationToken cancellationToken)
-        {
-            // Start the token renewal loop
-            Task.Run(async () => await RenewTokenLoop(_cancellationTokenSource.Token), cancellationToken);
-            return Task.CompletedTask;
-        }
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        // Start the token renewal loop
+        Task.Run(async () => await RenewTokenLoop(_cancellationTokenSource.Token), cancellationToken);
+        return Task.CompletedTask;
+    }
 
-        private async Task RenewTokenLoop(CancellationToken cancellationToken)
+    private async Task RenewTokenLoop(CancellationToken cancellationToken)
+    {
+        logger.LogInformation("PerformTask called");
+        while (!cancellationToken.IsCancellationRequested)
         {
-            _logger.LogInformation("PerformTask called");
-            var jwtService = _scopeFactory.CreateScope().ServiceProvider.GetRequiredService<JwtService>();
+            (bool isExpired, DateTime? dateExpiry, string accessToken) = await _jwtService.IsTokenExpired();
 
-            while (!cancellationToken.IsCancellationRequested)
+            // Check if the token is expired
+            if (isExpired)
             {
-                (bool isExpired, DateTime? dateExpiry, string accessToken) = await jwtService.IsTokenExpired();
+                //try to renew the token and get the expiration time
+                (DateTime tokenExpiration, bool success, string newAccessToken) = await _jwtService.RenewToken();
 
-                // Check if the token is expired
-                if (isExpired)
+                //something bad happened while renewing (network error etc) -> wait some seconds and try again later
+                if (!success)
+                    await Task.Delay(TimeSpan.FromSeconds(20), cancellationToken);
+                else
                 {
-                    //try to renew the token and get the expiration time
-                    (DateTime tokenExpiration, bool success, string newAccessToken) = await jwtService.RenewToken();
-
-                    //something bad happened while renewing (network error etc) -> wait some seconds and try again later
-                    if (!success)
-                        await Task.Delay(TimeSpan.FromSeconds(20), cancellationToken);
-                    else
-                    {
-                        //renew token and sleep until it's time to renew the token again
-                        TimeSpan sleepTime = tokenExpiration.Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
-                        _managementApiAccessTokenValue = newAccessToken;
-                        await Task.Delay(sleepTime, cancellationToken);
-                    }
-                }
-                // The token is still valid, sleep until renew time
-                else if (dateExpiry != null)
-                {
-                    _managementApiAccessTokenValue = accessToken;
-                    TimeSpan sleepTime = (dateExpiry.Value).Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
-                    if (sleepTime.Seconds > 0)
-                        await Task.Delay(sleepTime, cancellationToken);
+                    //renew token and sleep until it's time to renew the token again
+                    TimeSpan sleepTime = tokenExpiration.Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
+                    _managementApiAccessTokenValue = newAccessToken;
+                    await Task.Delay(sleepTime, cancellationToken);
                 }
             }
+            // The token is still valid, sleep until renew time
+            else if (dateExpiry != null)
+            {
+                _managementApiAccessTokenValue = accessToken;
+                TimeSpan sleepTime = (dateExpiry.Value).Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
+                if (sleepTime.Seconds > 0)
+                    await Task.Delay(sleepTime, cancellationToken);
+            }
         }
+    }
 
-        public async Task StopAsync(CancellationToken cancellationToken)
-        {
-            _cancellationTokenSource?.Cancel();
-            await Task.CompletedTask;
-        }
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        _cancellationTokenSource.Cancel();
+        await Task.CompletedTask;
+    }
 
-        public void Dispose()
-        {
-            GC.SuppressFinalize(this);
-            _cancellationTokenSource?.Dispose();
-        }
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+        _cancellationTokenSource.Dispose();
     }
 }
