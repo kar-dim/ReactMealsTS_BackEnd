@@ -45,7 +45,6 @@ public class NgrokTunnelService(IConfiguration config, IServer server, IHostAppl
             //call ngrok
             await Cli.Wrap("ngrok")
                 .WithArguments(args => args.Add("http").Add("--domain=" + ngrokUrl).Add(localUrl).Add("--log").Add("stdout"))
-                .WithStandardOutputPipe(PipeTarget.ToDelegate(s => logger.LogInformation(s)))
                 .WithStandardErrorPipe(PipeTarget.ToDelegate(s => logger.LogError(s)))
                 .ExecuteAsync(stoppingToken);
         }

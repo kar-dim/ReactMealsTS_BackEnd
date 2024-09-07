@@ -24,7 +24,7 @@ public class DishesController(OrderDbService orderService, DishRepository dishRe
             logger.LogError("GetDish: Could not find dish with ID {Id}", id);
             return NotFound();
         }
-        logger.LogInformation("GetDish: Found dish with ID {Id}",id);
+        logger.LogInformation("GetDish: Found dish with ID {Id}", id);
         return Ok(foundDish);
     }
 

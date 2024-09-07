@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using ReactMeals_WebApi.Contexts;
+﻿using ReactMeals_WebApi.Contexts;
 using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
 
@@ -20,7 +19,7 @@ public class DishesCacheService : IHostedService, IDisposable
         _inMemoryDishes = new List<Dish>(_mainDbContext.Dishes.OrderBy(dish => dish.DishId));
         _dishesCacheLock = new ReaderWriterLockSlim();
         _cancellationTokenSource = new CancellationTokenSource();
-}
+    }
     public Task StartAsync(CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
