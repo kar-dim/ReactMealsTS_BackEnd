@@ -26,7 +26,6 @@ public class JwtService(IServiceScopeFactory serviceScopeFactory, ILogger<JwtSer
     public async Task<(bool, DateTime?, string)> IsTokenExpired()
     {
         //check if the current token is expired
-        //Return true if expired, false otherwise
         Token tokenFromDb = await tokenRepository.GetManagementApiTokenAsync();
         if (tokenFromDb == null)
         {

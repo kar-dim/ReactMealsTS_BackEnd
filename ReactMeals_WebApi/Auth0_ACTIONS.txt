@@ -1,0 +1,68 @@
+/* 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+AFTER REGISTER ACTION (GET ACCESS TOKEN FROM M2M AUTH0 API + CALL BACKEND API TO INSERT THE REGISTERED USER)
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+*/
+
+const axios = require("axios");
+
+exports.onExecutePostUserRegistration = async (event) => {
+
+  //dev client id/client secret, stored online in Auth0 action as Secret Values
+  const client_id = event.secrets.CLIENT_ID;
+  const client_secret = event.secrets.CLIENT_SECRET;
+
+  //Request the access token
+  let options = { method: 'POST',
+    url: `https://dev-f0vakdckhtwh0dl8.us.auth0.com/oauth/token`,
+    headers: { 'content-type': 'application/json' },
+    data: `{"client_id":"${client_id}","client_secret":"${client_secret}","audience":"https://jimmys/registeruser/api","grant_type":"client_credentials"}` 
+  };
+  let res = null;
+  try {
+     res = await axios(options);
+  } catch (err) {
+    throw new Error(err);
+  }
+  //call .NET API Controller (send the token + user data to insert to db)
+  //.NET API "hosted" with NGROK, but could be a normal server
+  const access_token = res.data.access_token;
+  const user = {
+    user_id: event.user.user_id,
+    email: event.user.email,
+    name: event.user.user_metadata.name,
+    last_name: event.user.user_metadata.last_name,
+    address: event.user.user_metadata.address
+  }
+  console.log("USER: ", user);
+  options = { method: 'POST',
+    url: `https://solely-useful-grouse.ngrok-free.app/api/Users/CreateUser`,
+    headers: { 'content-type': 'application/json', Authorization: `Bearer ${access_token}`},
+    data: `{"user_id": "${user.user_id}", "email": "${user.email}", "name": "${user.name}","lastName": "${user.last_name}","address": "${user.address}"}` 
+  };
+  console.log("OPTIONS: ",options.data);
+  try {
+     res = await axios(options);
+  } catch (err) {
+    throw new Error('Could Not Insert User To .NET API');
+  }
+};
+
+
+
+/* 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+AFTER LOGIN ACTION (ADD USER METADATA TO IDTOKEN CLAIM -> CUSTOM DATA WILL BE AVAILABLE IN FRONTEND/REACT APP)
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+*/
+
+
+exports.onExecutePostLogin = async (event, api) => {
+  if (event.authorization) {
+    const namespace = 'https://jimmys/api';
+    api.idToken.setCustomClaim(`${namespace}/user_metadata.name`, event.user.user_metadata.name);
+    api.idToken.setCustomClaim(`${namespace}/user_metadata.last_name`, event.user.user_metadata.last_name);
+    api.idToken.setCustomClaim(`${namespace}/user_metadata.address`, event.user.user_metadata.address); 
+  }
+};
+
