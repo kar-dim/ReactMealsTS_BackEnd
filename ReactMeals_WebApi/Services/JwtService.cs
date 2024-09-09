@@ -22,6 +22,7 @@ public class JwtService(IServiceScopeFactory serviceScopeFactory, ILogger<JwtSer
 {
     private readonly TokenRepository tokenRepository = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<TokenRepository>();
 
+    private readonly string m2mSecret = File.ReadAllText("m2m_secret.txt").Trim();
     public async Task<(bool, DateTime?, string)> IsTokenExpired()
     {
         //check if the current token is expired
@@ -40,7 +41,7 @@ public class JwtService(IServiceScopeFactory serviceScopeFactory, ILogger<JwtSer
         RestClient client = new RestClient("https://" + congiguration["Auth0:M2M_Domain"]);
         RestRequest request = new RestRequest("oauth/token", Method.Post);
         request.AddHeader("content-type", "application/json");
-        request.AddParameter("application/x-www-form-urlencoded", "{\"client_id\":\"" + congiguration["Auth0:M2M_ClientID"] + "\",\"client_secret\":\"" + congiguration["Auth0:M2M_ClientSecret"] + "\",\"audience\":\"" + "https://" + congiguration["Auth0:M2M_Domain"] + "/api/v2/" + "\",\"grant_type\":\"client_credentials\"}", ParameterType.RequestBody);
+        request.AddParameter("application/x-www-form-urlencoded", "{\"client_id\":\"" + congiguration["Auth0:M2M_ClientID"] + "\",\"client_secret\":\"" + m2mSecret + "\",\"audience\":\"" + "https://" + congiguration["Auth0:M2M_Domain"] + "/api/v2/" + "\",\"grant_type\":\"client_credentials\"}", ParameterType.RequestBody);
         var response = await client.ExecuteAsync<Auth0ManagementResponse>(request);
         if (response == null || response.StatusCode != HttpStatusCode.OK || response.Data == null)
         {
