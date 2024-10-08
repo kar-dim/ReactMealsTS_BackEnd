@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using ReactMeals_WebApi.Contexts;
 using ReactMeals_WebApi.Repositories;
 using ReactMeals_WebApi.Services;
+using RestSharp;
 using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -82,7 +83,11 @@ builder.Services.AddSingleton<DishesCacheService>();
 builder.Services.AddHostedService(provider => provider.GetService<DishesCacheService>());
 //user orders service
 builder.Services.AddScoped<OrderDbService>();
-
+//RestShar singleton client
+builder.Services.AddSingleton(serviceProvider =>
+{
+    return new RestClient("https://" + serviceProvider.GetRequiredService<IConfiguration>()["Auth0:M2M_Domain"]);
+});
 var app = builder.Build();
 
 /*

@@ -18,11 +18,21 @@ public class Auth0ManagementResponse
     [JsonPropertyName("token_type")]
     public string TokenType { get; set; }
 }
-public class JwtService(IServiceScopeFactory serviceScopeFactory, ILogger<JwtService> logger, IConfiguration congiguration)
+public class JwtService
 {
-    private readonly TokenRepository tokenRepository = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<TokenRepository>();
+    private readonly ILogger<JwtService> logger;
+    private readonly TokenRepository tokenRepository;
+    private readonly RestClient client; //singleton RestClient for M2M
+    private readonly IConfiguration configuration;
+    private readonly string M2MSecret = File.ReadAllText("m2m_secret.txt").Trim();
 
-    private readonly string m2mSecret = File.ReadAllText("m2m_secret.txt").Trim();
+    public JwtService(IServiceScopeFactory serviceScopeFactory, ILogger<JwtService> logger, IConfiguration configuration, RestClient client)
+    {
+        this.logger = logger;
+        tokenRepository = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<TokenRepository>();
+        this.client = client;
+        this.configuration = configuration;
+    }
     public async Task<(bool, DateTime?, string)> IsTokenExpired()
     {
         //check if the current token is expired
@@ -35,12 +45,12 @@ public class JwtService(IServiceScopeFactory serviceScopeFactory, ILogger<JwtSer
         return (tokenFromDb.ExpiryDate <= DateTime.Now, tokenFromDb.ExpiryDate, tokenFromDb.TokenValue);
     }
 
+    //call the Auth0 Rest service to renew the token
     public async Task<(DateTime, bool, string)> RenewToken()
     {
-        RestClient client = new RestClient("https://" + congiguration["Auth0:M2M_Domain"]);
         RestRequest request = new RestRequest("oauth/token", Method.Post);
         request.AddHeader("content-type", "application/json");
-        request.AddParameter("application/x-www-form-urlencoded", "{\"client_id\":\"" + congiguration["Auth0:M2M_ClientID"] + "\",\"client_secret\":\"" + m2mSecret + "\",\"audience\":\"" + "https://" + congiguration["Auth0:M2M_Domain"] + "/api/v2/" + "\",\"grant_type\":\"client_credentials\"}", ParameterType.RequestBody);
+        request.AddParameter("application/x-www-form-urlencoded", "{\"client_id\":\"" + configuration["Auth0:M2M_ClientID"] + "\",\"client_secret\":\"" + M2MSecret + "\",\"audience\":\"" + "https://" + configuration["Auth0:M2M_Domain"] + "/api/v2/" + "\",\"grant_type\":\"client_credentials\"}", ParameterType.RequestBody);
         var response = await client.ExecuteAsync<Auth0ManagementResponse>(request);
         if (response == null || response.StatusCode != HttpStatusCode.OK || response.Data == null)
         {
