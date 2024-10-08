@@ -18,21 +18,11 @@ public class Auth0ManagementResponse
     [JsonPropertyName("token_type")]
     public string TokenType { get; set; }
 }
-public class JwtService
+public class JwtService(IServiceScopeFactory serviceScopeFactory, ILogger<JwtService> logger, IConfiguration configuration, RestClient client)
 {
-    private readonly ILogger<JwtService> logger;
-    private readonly TokenRepository tokenRepository;
-    private readonly RestClient client; //singleton RestClient for M2M
-    private readonly IConfiguration configuration;
+    private readonly TokenRepository tokenRepository = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<TokenRepository>();
     private readonly string M2MSecret = File.ReadAllText("m2m_secret.txt").Trim();
 
-    public JwtService(IServiceScopeFactory serviceScopeFactory, ILogger<JwtService> logger, IConfiguration configuration, RestClient client)
-    {
-        this.logger = logger;
-        tokenRepository = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<TokenRepository>();
-        this.client = client;
-        this.configuration = configuration;
-    }
     public async Task<(bool, DateTime?, string)> IsTokenExpired()
     {
         //check if the current token is expired
