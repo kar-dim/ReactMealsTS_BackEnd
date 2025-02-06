@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
 using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
 using ReactMeals_WebApi.Repositories;
@@ -8,6 +7,8 @@ using ReactMeals_WebApi.Services;
 using RestSharp;
 using System.Net;
 using System.Text.Json;
+
+using static System.String;
 
 namespace ReactMeals_WebApi.Controllers;
 
@@ -23,7 +24,7 @@ public class UsersController(UserRepository userRepository, ILogger<UsersControl
     {
         //check ManagementAPI token if exists from the injected service
         string mApiToken = jwtValidationAndRenewalService.ManagementApiToken;
-        if (mApiToken.IsNullOrEmpty())
+        if (IsNullOrEmpty(mApiToken))
         {
             logger.LogError("ManagementAPI Token does not exist");
             return Problem("Internal Problem");
@@ -34,7 +35,7 @@ public class UsersController(UserRepository userRepository, ILogger<UsersControl
         RestRequest request = new RestRequest("api/v2/users", Method.Get);
         request.AddHeader("Authorization", $"Bearer {mApiToken}");
         var response = await client.ExecuteAsync(request);
-        if (response == null || response.StatusCode != HttpStatusCode.OK || response.Content.IsNullOrEmpty())
+        if (response == null || response.StatusCode != HttpStatusCode.OK || IsNullOrEmpty(response.Content))
         {
             logger.LogError("Error in getting users info from api/v2/users");
             return Problem("INTERNAL ERROR");
@@ -51,7 +52,7 @@ public class UsersController(UserRepository userRepository, ILogger<UsersControl
         foreach (Auth0UserDeserialize user in users)
         {
             //only send users that have defined values (else skip them entirely)
-            if (!(user == null || user.Email.IsNullOrEmpty() || user.UserId.IsNullOrEmpty() || user.UserMetadata.Name.IsNullOrEmpty() || user.UserMetadata.LastName.IsNullOrEmpty() || user.UserMetadata.Address.IsNullOrEmpty()))
+            if (!(user == null || IsNullOrEmpty(user.Email) || IsNullOrEmpty(user.UserId) || IsNullOrEmpty(user.UserMetadata.Name) || IsNullOrEmpty(user.UserMetadata.LastName) || IsNullOrEmpty(user.UserMetadata.Address)))
             {
                 //skip admin!
                 if (!user.Nickname.Equals("admin"))
@@ -85,7 +86,7 @@ public class UsersController(UserRepository userRepository, ILogger<UsersControl
     {
         //check ManagementAPI token if exists from the injected service
         string mApiToken = jwtValidationAndRenewalService.ManagementApiToken;
-        if (mApiToken.IsNullOrEmpty())
+        if (IsNullOrEmpty(mApiToken))
         {
             logger.LogError("ManagementAPI Token does not exist");
             return Problem("Internal Problem");
@@ -100,7 +101,7 @@ public class UsersController(UserRepository userRepository, ILogger<UsersControl
         string userJsonSerialize = JsonSerializer.Serialize(new Auth0UserSerialize(newUser.Email, new UserMetadata(newUser.Name, newUser.LastName, newUser.Address)));
         request.AddParameter("application/json", userJsonSerialize, ParameterType.RequestBody);
         var response = await client.ExecuteAsync(request);
-        if (response == null || response.StatusCode != HttpStatusCode.OK || response.Content.IsNullOrEmpty())
+        if (response == null || response.StatusCode != HttpStatusCode.OK || IsNullOrEmpty(response.Content))
         {
             logger.LogError("Error in patching user from api/v2/users");
             return Problem("INTERNAL ERROR");
@@ -116,7 +117,7 @@ public class UsersController(UserRepository userRepository, ILogger<UsersControl
     {
         //check ManagementAPI token if exists from the injected service
         string mApiToken = jwtValidationAndRenewalService.ManagementApiToken;
-        if (mApiToken.IsNullOrEmpty())
+        if (IsNullOrEmpty(mApiToken))
         {
             logger.LogError("ManagementAPI Token does not exist");
             return Problem("Internal Problem");
