@@ -6,7 +6,6 @@ import gr.jimmys.jimmysfoodzilla.dto.AddDishDTOWithId;
 import gr.jimmys.jimmysfoodzilla.dto.UserOrdersDTO;
 import gr.jimmys.jimmysfoodzilla.dto.WebOrderDTO;
 import gr.jimmys.jimmysfoodzilla.models.Dish;
-import gr.jimmys.jimmysfoodzilla.repository.UserRepository;
 import gr.jimmys.jimmysfoodzilla.services.api.DishService;
 import gr.jimmys.jimmysfoodzilla.services.api.DishesCacheService;
 import gr.jimmys.jimmysfoodzilla.services.api.JwtRenewalService;
@@ -14,6 +13,7 @@ import gr.jimmys.jimmysfoodzilla.services.api.OrderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,14 +27,14 @@ import java.util.List;
 public class DishController {
     private final Logger logger = LoggerFactory.getLogger(DishController.class);
 
+    @Value("${auth0.audience}")
+    private String audience;
+
     @Autowired
     DishService dishService;
 
     @Autowired
     OrderService orderService;
-
-    @Autowired
-    UserRepository userRepository;
 
     @Autowired
     DishesCacheService cache;
@@ -98,7 +98,6 @@ public class DishController {
     //Authorized, default scheme
     @PostMapping("/Order")
     public ResponseEntity<Void> createOrder(@RequestBody WebOrderDTO dto) {
-
         var result = orderService.createOrder(dto);
         if (!result.isSuccess()) {
             logger.error("CreateOrder: {}", result.error());
@@ -113,7 +112,7 @@ public class DishController {
         if (token == null || !token.startsWith("Bearer ")) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        var tokenValidationStatus = jwtRenewalService.validateToken(token);
+        var tokenValidationStatus = jwtRenewalService.validateToken(token, audience);
         if (tokenValidationStatus != HttpStatus.OK)
             return ResponseEntity.status(tokenValidationStatus).build();
 

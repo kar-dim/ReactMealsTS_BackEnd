@@ -82,7 +82,7 @@ public class UserController {
         if (token == null || !token.startsWith("Bearer ")) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        var tokenValidationStatus = jwtRenewalService.validateToken(token);
+        var tokenValidationStatus = jwtRenewalService.validateToken(token, audience);
         if (tokenValidationStatus != HttpStatus.OK)
             return ResponseEntity.status(tokenValidationStatus).build();
         //JWT checks passed, insert the user to DB if not already exists
@@ -96,7 +96,7 @@ public class UserController {
     }
 
     @PutMapping("/UpdateUser")
-    public ResponseEntity<Void> updateUser(@RequestBody User user) {
+    public ResponseEntity<Void> updateUser(@RequestBody User newUser) {
         String mApiToken = jwtRenewalService.getManagementApiToken();
         //check if management api token exists from the injected service
         if (mApiToken == null || mApiToken.trim().isEmpty()) {
@@ -104,19 +104,19 @@ public class UserController {
             return ResponseEntity.internalServerError().build();
         }
         try {
-            var userToSend = new Auth0UserSerialize(user.getEmail(), new UserMetadata(user.getName(), user.getLastName(), user.getAddress()));
-            HttpResponse<Empty> response = Unirest.patch("https://" + auth0_domain + "/api/v2/users/" + URLEncoder.encode(user.getUserId(), StandardCharsets.UTF_8))
+            var userToSend = new Auth0UserSerialize(newUser.getEmail(), new UserMetadata(newUser.getName(), newUser.getLastName(), newUser.getAddress()));
+            HttpResponse<Empty> response = Unirest.patch("https://" + auth0_domain + "/api/v2/users/" + URLEncoder.encode(newUser.getUserId(), StandardCharsets.UTF_8))
                     .header("Authorization", "Bearer " + mApiToken)
                     .header("Content-type", "application/json")
                     .header("Accept", "application/json")
                     .body(userToSend)
                     .asEmpty();
             if (response.getStatus() != 200) {
-                logger.error("Error in ManagementAPI api/v2/users/{} HTTP PATCH request, could not patch user\nReason: STATUS CODE: {} STATUS TEXT: {}", user.getUserId(), response.getStatus(), response.getStatusText());
+                logger.error("Error in ManagementAPI api/v2/users/{} HTTP PATCH request, could not patch user\nReason: STATUS CODE: {} STATUS TEXT: {}", newUser.getUserId(), response.getStatus(), response.getStatusText());
                 return ResponseEntity.internalServerError().build();
             }
-            //we can delete the user's orders from our own db (Order, OrderItem tables)
-            //but let's keep them for "archival/proof" reasons
+            //update user in db
+            userRepository.save(newUser);
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (UnirestException e) {
             logger.error("Error in ManagementAPI api/v2/users HTTP PATCH request");
@@ -142,8 +142,7 @@ public class UserController {
                         "Reason: STATUS CODE: " + response.getStatus() + " STATUS TEXT: " + response.getStatusText());
                 return ResponseEntity.internalServerError().build();
             }
-            //we can delete the user's orders from our own db (Order, OrderItem tables)
-            //but let's keep them for "archival/proof" reasons
+            //delete user from db? for now not..
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (UnirestException e) {
             logger.error("Error in ManagementAPI api/v2/users HTTP DELETE request");

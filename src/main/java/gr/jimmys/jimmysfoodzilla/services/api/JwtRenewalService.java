@@ -4,13 +4,8 @@ import com.nimbusds.jose.jwk.JWKSet;
 import org.springframework.http.HttpStatus;
 
 public interface JwtRenewalService {
-    JWKSet getJwkSet();
-
     void setJwkSet(JWKSet jwkSet);
-
-    HttpStatus validateToken(String token);
-
+    HttpStatus validateToken(String token, String audienceToCheck);
     String getManagementApiToken();
-
     void setManagementApiToken(String value);
 }

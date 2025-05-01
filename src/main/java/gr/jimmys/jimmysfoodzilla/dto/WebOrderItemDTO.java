@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class WebOrderItemDTO {
+    @JsonProperty("dishid")
     private int dishId;
 
     @JsonProperty("dish_counter")

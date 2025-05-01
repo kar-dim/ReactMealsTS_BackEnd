@@ -30,9 +30,6 @@ public class JwtRenewalServiceImpl implements JwtRenewalService {
     @Value("${auth0.domain}")
     private String domain;
 
-    @Value("${auth0.m2maudience}")
-    private String audience;
-
     private String managementApiToken;
 
     private JWKSet jwkSet;
@@ -92,9 +89,9 @@ public class JwtRenewalServiceImpl implements JwtRenewalService {
     }
 
     @Override
-    public HttpStatus validateToken(String token) {
+    public HttpStatus validateToken(String token, String audienceToCheck) {
         try {
-            if (jwkSet == null || audience == null) //internal problem...
+            if (jwkSet == null || audienceToCheck == null) //internal problem...
                 return HttpStatus.INTERNAL_SERVER_ERROR;
             if (token.length() < 8)
                 return HttpStatus.BAD_REQUEST; //bad token value (avoid substring crash)
@@ -110,7 +107,7 @@ public class JwtRenewalServiceImpl implements JwtRenewalService {
                 return HttpStatus.FORBIDDEN; //cannot verify, let's return FORBIDDEN
             // Check the 'aud' claim
             var audValues = signedJWT.getJWTClaimsSet().getAudience();
-            if (!audValues.contains(audience))
+            if (!audValues.contains(audienceToCheck))
                 return HttpStatus.FORBIDDEN;
         } catch (ParseException | JOSEException e) {
             return HttpStatus.FORBIDDEN;
@@ -126,11 +123,6 @@ public class JwtRenewalServiceImpl implements JwtRenewalService {
     @Override
     public synchronized void setManagementApiToken(String value) {
         this.managementApiToken = value;
-    }
-
-    @Override
-    public synchronized JWKSet getJwkSet() {
-        return jwkSet;
     }
 
     @Override
