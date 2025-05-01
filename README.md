@@ -59,7 +59,7 @@ auth0.m2m_clientsecret=...
 
 ---
 
-## 📎 Notes
+## Notes
 
 - Do **not** commit any secret files (like `secret.properties` or `m2m_secret.txt`) to version control.
 - NGROK can be used for secure HTTPS development tunnel.
