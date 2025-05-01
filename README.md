@@ -29,7 +29,7 @@ This repository contains the **backend** implementation (in both .NET and Java) 
 - Uses Spring Boot with JPA (Hibernate) + HikariCP, by default connects to the same local MS SQL Server as the .NET implementation (uses different database)
 - Auth0 secret and its various properties are stored in a `secret.properties` file (excluded from version control).
 
-#### 🔐 Auth0 Configuration (`secret.properties`)
+#### Auth0 Configuration (`secret.properties`)
 
 Place this file at:
 
@@ -49,7 +49,7 @@ auth0.m2m_clientsecret=...
 
 ---
 
-## 📦 Getting Started
+## Getting Started
 
 1. Clone this repository.
 2. Checkout the appropriate branch (`master` for .NET or `spring` for Java).
