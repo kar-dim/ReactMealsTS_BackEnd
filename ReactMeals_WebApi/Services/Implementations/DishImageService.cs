@@ -4,7 +4,7 @@ namespace ReactMeals_WebApi.Services.Implementations
 {
     public class DishImageService(ILogger<DishImageService> logger) : IDishImageService
     {
-        private static readonly string ImagePath = "Images/";
+        private static readonly string ImagePath = "Images";
         private static readonly Dictionary<byte[], string> knownMagicBytes = new()
         {
             { new byte[] { 0xFF, 0xD8, 0xFF }, "jpg" },
@@ -27,22 +27,34 @@ namespace ReactMeals_WebApi.Services.Implementations
             return null;
         }
 
+        public void DeleteImage(string fileName)
+        {
+            try 
+            {
+                File.Delete(Path.Combine(ImagePath, fileName));
+            }
+            catch (Exception ex)
+            {
+                logger.LogError("Could not delete image {FileName}: {Error}", fileName, ex.Message);
+            }
+        }
+
         public void SaveImage(string fileName, byte[] data)
         {
-            File.WriteAllBytes(Path.Combine(ImagePath, fileName), data);
+            try
+            {
+                File.WriteAllBytes(Path.Combine(ImagePath, fileName), data);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError("Could not save image {FileName}: {Error}", fileName, ex.Message);
+            }
         }
 
         public void ReplaceImage(string oldFile, string newFile, byte[] data)
         {
-            try
-            {
-                File.Delete(Path.Combine(ImagePath, oldFile));
-                SaveImage(newFile, data);
-            }
-            catch
-            {
-                logger.LogError("Could not remove or update image {Old}", oldFile);
-            }
+            DeleteImage(oldFile);
+            SaveImage(newFile, data);
         }
     }
 }

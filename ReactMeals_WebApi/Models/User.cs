@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace ReactMeals_WebApi.Models;
 
@@ -16,6 +17,7 @@ public class User
     }
 
     [Key]
+    [JsonPropertyName("user_id")]
     public string User_Id { get; set; } //"user_id" from auth0
 
     public string Email { get; set; } //"email" from auth0

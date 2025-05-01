@@ -66,15 +66,8 @@ namespace ReactMeals_WebApi.Services.Implementations
 
             cache.DeleteCacheEntry(id);
             await dishRepo.RemoveAsync(dish);
+            imageService.DeleteImage(dish.Dish_url);
 
-            try
-            {
-                File.Delete(Path.Combine("Images", dish.Dish_url));
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Could not delete dish image file from disk, for dish with ID {Id}", id);
-            }
             return Result.Success();
         }
     }

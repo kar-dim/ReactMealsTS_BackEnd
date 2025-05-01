@@ -52,11 +52,7 @@ public class UsersController(UserRepository userRepository, RestClient client, I
         {
             //only send users that have defined values (else skip them entirely)
             if (!(user == null || IsNullOrEmpty(user.Email) || IsNullOrEmpty(user.UserId) || IsNullOrEmpty(user.UserMetadata.Name) || IsNullOrEmpty(user.UserMetadata.LastName) || IsNullOrEmpty(user.UserMetadata.Address)))
-            {
-                //skip admin!
-                if (!user.Nickname.Equals("admin"))
-                    usersToReturn.Add(new User(user.UserId, user.Email, user.UserMetadata.Name, user.UserMetadata.LastName, user.UserMetadata.Address));
-            }
+                usersToReturn.Add(new User(user.UserId, user.Email, user.UserMetadata.Name, user.UserMetadata.LastName, user.UserMetadata.Address));
         }
         return Ok(usersToReturn); //if empty it is still OK, client will handle it
     }
@@ -67,12 +63,12 @@ public class UsersController(UserRepository userRepository, RestClient client, I
     [Authorize(AuthenticationSchemes = "M2M_UserRegister")]
     public async Task<ActionResult<User>> CreateUser([FromBody] User userToCreate)
     {
-        logger.LogInformation("New User Created [Sent from Auth0]: {User}", userToCreate.ToString());
         if (await userRepository.UserExists(userToCreate))
         {
             logger.LogError("Error: User already exists");
             return Problem(ErrorMessages.InternalError);
         }
+        logger.LogInformation("New User Created [Sent from Auth0]: {User}", userToCreate.ToString());
         await userRepository.AddAsync(userToCreate);
         return Ok(userToCreate);
     }
