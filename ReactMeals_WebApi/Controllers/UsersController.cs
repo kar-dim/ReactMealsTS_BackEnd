@@ -100,6 +100,8 @@ public class UsersController(UserRepository userRepository, RestClient client, I
             logger.LogError("Error in patching user from api/v2/users");
             return Problem(ErrorMessages.InternalError);
         }
+        //update user in db
+        await userRepository.UpdateAsync(newUser);
         return Ok();
     }
 
@@ -126,6 +128,7 @@ public class UsersController(UserRepository userRepository, RestClient client, I
             logger.LogError("Error in deleting user from api/v2/users");
             return Problem(ErrorMessages.InternalError);
         }
+        //TODO remove from db? -> for now not..
         return Ok();
     }
 }

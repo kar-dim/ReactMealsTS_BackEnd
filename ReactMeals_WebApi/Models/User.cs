@@ -16,6 +16,15 @@ public class User
         Address = address;
     }
 
+    public void UpdateUser(User other)
+    {
+        User_Id = other.User_Id;
+        Email = other.Email;
+        Name = other.Name;
+        LastName = other.LastName;
+        Address = other.Address;
+    }
+
     [Key]
     [JsonPropertyName("user_id")]
     public string User_Id { get; set; } //"user_id" from auth0

@@ -15,4 +15,12 @@ public class UserRepository(MainDbContext context)
         context.Users.Add(user);
         await context.SaveChangesAsync();
     }
+
+    public async Task UpdateAsync(User newUser)
+    {
+        var existingUser = await context.Users.FirstOrDefaultAsync(u => u.User_Id == newUser.User_Id) 
+            ?? throw new InvalidOperationException($"User with ID {newUser.User_Id} does not exist.");
+        existingUser.UpdateUser(newUser);
+        await context.SaveChangesAsync();
+    }
 }
