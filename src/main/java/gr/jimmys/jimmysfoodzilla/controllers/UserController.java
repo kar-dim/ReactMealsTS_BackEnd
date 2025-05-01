@@ -1,11 +1,5 @@
 package gr.jimmys.jimmysfoodzilla.controllers;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.crypto.RSASSAVerifier;
-import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jwt.SignedJWT;
 import gr.jimmys.jimmysfoodzilla.dto.Auth0UserDeserialize;
 import gr.jimmys.jimmysfoodzilla.dto.Auth0UserSerialize;
 import gr.jimmys.jimmysfoodzilla.dto.UserMetadata;
@@ -25,8 +19,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.text.ParseException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -59,7 +51,8 @@ public class UserController {
         try {
             HttpResponse<List<Auth0UserDeserialize>> response = Unirest.get("https://" + auth0_domain + "/api/v2/users")
                     .header("Authorization", "Bearer " + mApiToken)
-                    .asObject(new GenericType<>() {});
+                    .asObject(new GenericType<>() {
+                    });
             if (response.getStatus() != 200 || response.getBody() == null) {
                 logger.error("Error in ManagementAPI api/v2/users HTTP GET request, could not get users\nReason: STATUS CODE: {} STATUS TEXT: {}", response.getStatus(), response.getStatusText());
                 return ResponseEntity.internalServerError().build();
@@ -74,7 +67,7 @@ public class UserController {
             var usersToReturn = users.stream()
                     .filter(Objects::nonNull)
                     .filter(Auth0UserDeserialize::isValidUser)
-                    .filter(user -> !"admin".equals(user.getNickname()))
+                    //.filter(user -> !"admin".equals(user.getNickname()))
                     .map(user -> new User(user.getUserId(), user.getEmail(), user.getUserMetadata().getName(), user.getUserMetadata().getLastName(), user.getUserMetadata().getAddress()))
                     .collect(Collectors.toList());
             return new ResponseEntity<>(usersToReturn, HttpStatus.OK);
@@ -93,8 +86,7 @@ public class UserController {
         if (tokenValidationStatus != HttpStatus.OK)
             return ResponseEntity.status(tokenValidationStatus).build();
         //JWT checks passed, insert the user to DB if not already exists
-        if (userRepository.existsById(userToCreate.getUserId()))
-        {
+        if (userRepository.existsById(userToCreate.getUserId())) {
             logger.error("Error: User already exists");
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "User Already Exists!");
         }

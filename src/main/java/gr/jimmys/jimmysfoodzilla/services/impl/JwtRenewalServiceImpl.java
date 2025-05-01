@@ -1,9 +1,7 @@
 package gr.jimmys.jimmysfoodzilla.services.impl;
 
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
-import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jwt.SignedJWT;
 import gr.jimmys.jimmysfoodzilla.services.api.JwtRenewalService;
@@ -14,7 +12,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -22,7 +19,6 @@ import java.text.ParseException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 
 @Service
 public class JwtRenewalServiceImpl implements JwtRenewalService {
@@ -79,8 +75,7 @@ public class JwtRenewalServiceImpl implements JwtRenewalService {
                         //sleep util it's time to renew the token (plus some seconds)
                         Thread.sleep(sleepTime.toMillis());
 
-                    }
-                    else {
+                    } else {
                         //the token is still valid
                         logger.info("Successfully retrieved local token. It will expire at: {}", token.getExpiryDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
                         setManagementApiToken(token.getTokenValue());

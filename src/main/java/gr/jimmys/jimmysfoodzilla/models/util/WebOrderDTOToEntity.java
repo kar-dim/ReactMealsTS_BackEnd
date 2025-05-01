@@ -16,7 +16,7 @@ public class WebOrderDTOToEntity {
         newOrder.setUser(user);
         newOrder.setTotalCost(cost);
         List<OrderItem> orderItems = new ArrayList<>();
-        for (int i = 0; i< orderDTO.order().length; i++) {
+        for (int i = 0; i < orderDTO.order().length; i++) {
             OrderItem orderItem = new OrderItem();
             orderItem.setDishCounter(orderDTO.order()[i].getDishCounter());
             orderItem.setDish(dishesFromOrder.get(i));

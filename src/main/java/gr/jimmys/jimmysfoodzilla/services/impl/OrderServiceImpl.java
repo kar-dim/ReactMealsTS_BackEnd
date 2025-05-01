@@ -3,9 +3,7 @@ package gr.jimmys.jimmysfoodzilla.services.impl;
 import gr.jimmys.jimmysfoodzilla.common.ErrorMessages;
 import gr.jimmys.jimmysfoodzilla.common.Result;
 import gr.jimmys.jimmysfoodzilla.dto.*;
-import gr.jimmys.jimmysfoodzilla.models.Dish;
 import gr.jimmys.jimmysfoodzilla.models.DishWithCounter;
-import gr.jimmys.jimmysfoodzilla.models.User;
 import gr.jimmys.jimmysfoodzilla.models.util.WebOrderDTOToEntity;
 import gr.jimmys.jimmysfoodzilla.repository.DishRepository;
 import gr.jimmys.jimmysfoodzilla.repository.OrderRepository;
@@ -15,14 +13,17 @@ import gr.jimmys.jimmysfoodzilla.services.api.OrderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 import static java.math.BigDecimal.valueOf;
 import static java.util.stream.Collectors.toMap;
-import java.math.BigDecimal;
 
-import java.util.*;
-import java.util.stream.Collectors;
-
+@Service
 public class OrderServiceImpl implements OrderService {
     private final Logger logger = LoggerFactory.getLogger(OrderServiceImpl.class);
 
@@ -63,9 +64,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public UserOrdersDTO getUserOrders(String userId) {
-       var orders = orderRepository.findUserOrders(userId);
-       if (orders.isEmpty())
-           return new UserOrdersDTO(new UserOrder[]{});
+        var orders = orderRepository.findUserOrders(userId);
+        if (orders.isEmpty())
+            return new UserOrdersDTO(new UserOrder[]{});
 
         var userOrders = orders.stream()
                 .collect(Collectors.groupingBy(AllUserOrdersDTO::webOrderId))

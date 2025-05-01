@@ -6,5 +6,6 @@ import gr.jimmys.jimmysfoodzilla.dto.WebOrderDTO;
 
 public interface OrderService {
     Result createOrder(WebOrderDTO dto);
+
     UserOrdersDTO getUserOrders(String userId);
 }

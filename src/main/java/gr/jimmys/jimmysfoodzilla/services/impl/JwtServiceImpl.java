@@ -37,7 +37,7 @@ public class JwtServiceImpl implements JwtService {
 
     @PostConstruct
     public void init() {
-        requestBody = new ManagementInputDTO(clientId, clientSecret,  "https://" + domain + "/api/v2/", "client_credentials");
+        requestBody = new ManagementInputDTO(clientId, clientSecret, "https://" + domain + "/api/v2/", "client_credentials");
     }
 
     @Override

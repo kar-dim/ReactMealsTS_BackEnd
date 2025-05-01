@@ -1,7 +1,8 @@
 package gr.jimmys.jimmysfoodzilla.security;
+
 import jakarta.annotation.PostConstruct;
-import kong.unirest.jackson.JacksonObjectMapper;
 import kong.unirest.core.Unirest;
+import kong.unirest.jackson.JacksonObjectMapper;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 

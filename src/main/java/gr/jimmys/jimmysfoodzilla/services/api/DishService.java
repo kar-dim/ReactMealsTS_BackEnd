@@ -7,7 +7,10 @@ import gr.jimmys.jimmysfoodzilla.utils.Holder;
 
 public interface DishService {
     String generateDishFilename(String dishName, String dishB64, Holder<byte[]> imageBytes);
+
     Result addDish(AddDishDTO dto);
+
     Result updateDish(AddDishDTOWithId dto);
+
     Result deleteDish(int id);
 }

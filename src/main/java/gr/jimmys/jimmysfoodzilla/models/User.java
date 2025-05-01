@@ -1,5 +1,6 @@
 package gr.jimmys.jimmysfoodzilla.models;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -16,6 +17,7 @@ import lombok.ToString;
 @Entity
 @Table(name = "Users")
 public class User {
+    @JsonProperty("user_id")
     @Id
     @Column(name = "User_Id")
     private String userId; //"user_id" from auth0

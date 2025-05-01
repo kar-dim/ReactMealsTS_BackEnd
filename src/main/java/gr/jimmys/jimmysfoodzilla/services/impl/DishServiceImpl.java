@@ -3,7 +3,6 @@ package gr.jimmys.jimmysfoodzilla.services.impl;
 import gr.jimmys.jimmysfoodzilla.common.Result;
 import gr.jimmys.jimmysfoodzilla.dto.AddDishDTO;
 import gr.jimmys.jimmysfoodzilla.dto.AddDishDTOWithId;
-import gr.jimmys.jimmysfoodzilla.models.Dish;
 import gr.jimmys.jimmysfoodzilla.models.util.AddDishDTOMapping;
 import gr.jimmys.jimmysfoodzilla.repository.DishRepository;
 import gr.jimmys.jimmysfoodzilla.services.api.DishImageService;
@@ -13,15 +12,11 @@ import gr.jimmys.jimmysfoodzilla.utils.Holder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Base64;
 
+@Service
 public class DishServiceImpl implements DishService {
     private final Logger logger = LoggerFactory.getLogger(DishServiceImpl.class);
 
@@ -35,8 +30,7 @@ public class DishServiceImpl implements DishService {
     DishImageService imageService;
 
     @Override
-    public String generateDishFilename(String dishName, String dishB64, Holder<byte[]> imageBytes)
-    {
+    public String generateDishFilename(String dishName, String dishB64, Holder<byte[]> imageBytes) {
         imageBytes.setValue(Base64.getDecoder().decode(dishB64));
         var extension = imageService.validateImage(imageBytes.getValue());
         if (extension == null)

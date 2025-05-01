@@ -19,7 +19,7 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int Id;
 
-    @Column(name="TotalCost", precision= 18, scale = 2)
+    @Column(name = "TotalCost", precision = 18, scale = 2)
     private BigDecimal totalCost;
 
     //User reference
@@ -31,7 +31,7 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> orderItems;
 
-    public Order(List<OrderItem> orderItems, User user, BigDecimal totalCost){
+    public Order(List<OrderItem> orderItems, User user, BigDecimal totalCost) {
         this.orderItems = orderItems;
         this.user = user;
         this.totalCost = totalCost;

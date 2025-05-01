@@ -1,22 +1,20 @@
 package gr.jimmys.jimmysfoodzilla.services.impl;
 
-import gr.jimmys.jimmysfoodzilla.controllers.DishController;
 import gr.jimmys.jimmysfoodzilla.services.api.DishImageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ResourceLoader;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-@Component
+@Service
 public class DishImageServiceImpl implements DishImageService {
     private final Logger logger = LoggerFactory.getLogger(DishImageServiceImpl.class);
 
@@ -26,12 +24,13 @@ public class DishImageServiceImpl implements DishImageService {
     ResourceLoader resourceLoader;
 
     private static final HashMap<byte[], String> knownMagicBytes;
+
     static {
         knownMagicBytes = new HashMap<>();
-        knownMagicBytes.put(new byte[] { (byte)0xFF, (byte)0xD8, (byte)0xFF }, "jpg");
-        knownMagicBytes.put(new byte[] { (byte)0x89, (byte)0x50, (byte)0x4E, (byte)0x47 }, "png");
-        knownMagicBytes.put(new byte[] { (byte)0x47, (byte)0x49, (byte)0x46, (byte)0x38 }, "gif");
-        knownMagicBytes.put(new byte[] { (byte)0x42, (byte)0x4D }, "bmp");
+        knownMagicBytes.put(new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF}, "jpg");
+        knownMagicBytes.put(new byte[]{(byte) 0x89, (byte) 0x50, (byte) 0x4E, (byte) 0x47}, "png");
+        knownMagicBytes.put(new byte[]{(byte) 0x47, (byte) 0x49, (byte) 0x46, (byte) 0x38}, "gif");
+        knownMagicBytes.put(new byte[]{(byte) 0x42, (byte) 0x4D}, "bmp");
     }
 
     @Override

@@ -4,8 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
-public class UserOrdersDTO
-{
+public class UserOrdersDTO {
     @JsonProperty("orders")
     public UserOrder[] orders;
 }

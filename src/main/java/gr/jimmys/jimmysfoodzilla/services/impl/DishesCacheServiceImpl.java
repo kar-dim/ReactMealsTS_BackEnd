@@ -1,8 +1,8 @@
 package gr.jimmys.jimmysfoodzilla.services.impl;
 
+import gr.jimmys.jimmysfoodzilla.dto.AddDishDTO;
 import gr.jimmys.jimmysfoodzilla.models.Dish;
 import gr.jimmys.jimmysfoodzilla.repository.DishRepository;
-import gr.jimmys.jimmysfoodzilla.dto.*;
 import gr.jimmys.jimmysfoodzilla.services.api.DishesCacheService;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,13 +44,12 @@ public class DishesCacheServiceImpl implements DishesCacheService {
     public Dish getDish(int dishId) {
         dishReadLock.lock();
         try {
-            for(Dish dish : inMemoryDishes) {
+            for (Dish dish : inMemoryDishes) {
                 if (dish.getId() == dishId)
                     return dish;
             }
             return null;
-        }
-        finally {
+        } finally {
             dishReadLock.unlock();
         }
     }
@@ -60,8 +59,7 @@ public class DishesCacheServiceImpl implements DishesCacheService {
         dishReadLock.lock();
         try {
             return inMemoryDishes;
-        }
-        finally {
+        } finally {
             dishReadLock.unlock();
         }
     }
@@ -84,8 +82,7 @@ public class DishesCacheServiceImpl implements DishesCacheService {
         dishWriteLock.lock();
         try {
             inMemoryDishes.add(dish);
-        }
-        finally {
+        } finally {
             dishWriteLock.unlock();
         }
     }
@@ -100,23 +97,21 @@ public class DishesCacheServiceImpl implements DishesCacheService {
                     break;
                 }
             }
-        }
-        finally {
+        } finally {
             dishWriteLock.unlock();
         }
     }
 
     @Override
-    public BigDecimal getDishCost(int dishId){
+    public BigDecimal getDishCost(int dishId) {
         dishReadLock.lock();
         try {
             return inMemoryDishes.stream()
-                .filter(dish -> dish.getId() == dishId)
-                .map(Dish::getPrice)
-                .findFirst()
-                .orElse(BigDecimal.ZERO); //assume ZERO is invalid value
-        }
-        finally {
+                    .filter(dish -> dish.getId() == dishId)
+                    .map(Dish::getPrice)
+                    .findFirst()
+                    .orElse(BigDecimal.ZERO); //assume ZERO is invalid value
+        } finally {
             dishReadLock.unlock();
         }
     }
@@ -125,14 +120,13 @@ public class DishesCacheServiceImpl implements DishesCacheService {
     public void updateCacheEntry(Dish dish) {
         dishWriteLock.lock();
         try {
-            for (int i=0; i<inMemoryDishes.size(); i++) {
+            for (int i = 0; i < inMemoryDishes.size(); i++) {
                 if (inMemoryDishes.get(i).getId() == dish.getId()) {
                     inMemoryDishes.set(i, dish);
                     break;
                 }
             }
-        }
-        finally {
+        } finally {
             dishWriteLock.unlock();
         }
     }
@@ -149,8 +143,7 @@ public class DishesCacheServiceImpl implements DishesCacheService {
                     return true;
             }
             return false;
-        }
-        finally {
+        } finally {
             dishReadLock.unlock();
         }
     }

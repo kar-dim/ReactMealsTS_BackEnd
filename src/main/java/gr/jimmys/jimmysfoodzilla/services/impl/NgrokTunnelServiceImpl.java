@@ -28,11 +28,11 @@ public class NgrokTunnelServiceImpl implements TunnelService {
         //don't run ngrok in production
         if (!isDev)
             return;
-        Thread ngrokThread = new Thread( () -> {
+        Thread ngrokThread = new Thread(() -> {
             try {
                 logger.info("START service");
-                ProcessBuilder ngrokKill = new ProcessBuilder(List.of("taskkill","/f", "/im", "ngrok.exe"));
-                ProcessBuilder ngrokStart = new ProcessBuilder(List.of("ngrok","http", "--domain=" + ngrokUrl, String.valueOf(port) ));
+                ProcessBuilder ngrokKill = new ProcessBuilder(List.of("taskkill", "/f", "/im", "ngrok.exe"));
+                ProcessBuilder ngrokStart = new ProcessBuilder(List.of("ngrok", "http", "--domain=" + ngrokUrl, String.valueOf(port)));
                 //kill (if exists)
                 Process p = ngrokKill.start();
                 int code = p.waitFor();
