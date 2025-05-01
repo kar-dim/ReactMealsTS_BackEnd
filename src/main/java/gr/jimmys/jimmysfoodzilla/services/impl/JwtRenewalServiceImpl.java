@@ -1,6 +1,11 @@
 package gr.jimmys.jimmysfoodzilla.services.impl;
 
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jwt.SignedJWT;
 import gr.jimmys.jimmysfoodzilla.services.api.JwtRenewalService;
 import gr.jimmys.jimmysfoodzilla.services.api.JwtService;
 import jakarta.annotation.PostConstruct;
@@ -8,12 +13,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
+import java.text.ParseException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Service
 public class JwtRenewalServiceImpl implements JwtRenewalService {
@@ -24,6 +33,9 @@ public class JwtRenewalServiceImpl implements JwtRenewalService {
 
     @Value("${auth0.domain}")
     private String domain;
+
+    @Value("${auth0.m2maudience}")
+    private String audience;
 
     private String managementApiToken;
 
@@ -82,6 +94,33 @@ public class JwtRenewalServiceImpl implements JwtRenewalService {
             }
         });
         jwtValidationAndRenewalThread.start();
+    }
+
+    @Override
+    public HttpStatus validateToken(String token) {
+        try {
+            if (jwkSet == null || audience == null) //internal problem...
+                return HttpStatus.INTERNAL_SERVER_ERROR;
+            if (token.length() < 8)
+                return HttpStatus.BAD_REQUEST; //bad token value (avoid substring crash)
+            // Extract the JWT token
+            var signedJWT = SignedJWT.parse(token.substring(7)); //skip "Bearer " prefix
+            // Retrieve the JWK with a matching key ID (kid)
+            var jwk = jwkSet.getKeyByKeyId(signedJWT.getHeader().getKeyID());
+            if (jwk == null)  //internal problem...
+                return HttpStatus.INTERNAL_SERVER_ERROR;
+            // Verify the JWT signature using the public key
+            var verifier = new RSASSAVerifier(jwk.toRSAKey());
+            if (!signedJWT.verify(verifier))
+                return HttpStatus.FORBIDDEN; //cannot verify, let's return FORBIDDEN
+            // Check the 'aud' claim
+            var audValues = signedJWT.getJWTClaimsSet().getAudience();
+            if (!audValues.contains(audience))
+                return HttpStatus.FORBIDDEN;
+        } catch (ParseException | JOSEException e) {
+            return HttpStatus.FORBIDDEN;
+        }
+        return HttpStatus.OK;
     }
 
     @Override

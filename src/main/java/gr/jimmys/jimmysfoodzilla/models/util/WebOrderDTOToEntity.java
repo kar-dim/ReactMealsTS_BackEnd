@@ -1,4 +1,4 @@
-package gr.jimmys.jimmysfoodzilla.utils;
+package gr.jimmys.jimmysfoodzilla.models.util;
 
 import gr.jimmys.jimmysfoodzilla.dto.WebOrderDTO;
 import gr.jimmys.jimmysfoodzilla.models.Dish;
@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class WebOrderDTOToEntity {
-    public static Order OrderDTOToEntity(WebOrderDTO orderDTO, List<Dish> dishesFromOrder, BigDecimal cost, User user) {
+    public static Order orderDTOToEntity(WebOrderDTO orderDTO, List<Dish> dishesFromOrder, BigDecimal cost, User user) {
         Order newOrder = new Order();
         newOrder.setUser(user);
         newOrder.setTotalCost(cost);

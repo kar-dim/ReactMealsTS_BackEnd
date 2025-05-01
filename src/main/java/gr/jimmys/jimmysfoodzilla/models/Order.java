@@ -1,6 +1,7 @@
 package gr.jimmys.jimmysfoodzilla.models;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -9,6 +10,7 @@ import java.util.List;
 
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "Orders")
 public class Order {
@@ -28,4 +30,10 @@ public class Order {
     //OrderItem reference
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> orderItems;
+
+    public Order(List<OrderItem> orderItems, User user, BigDecimal totalCost){
+        this.orderItems = orderItems;
+        this.user = user;
+        this.totalCost = totalCost;
+    }
 }

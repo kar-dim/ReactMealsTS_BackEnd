@@ -8,8 +8,11 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -64,6 +67,19 @@ public class DishesCacheServiceImpl implements DishesCacheService {
     }
 
     @Override
+    public List<Dish> getDishes(List<Integer> dishIds) {
+        Set<Integer> idSet = new HashSet<>(dishIds);
+        dishReadLock.lock();
+        try {
+            return inMemoryDishes.stream()
+                    .filter(dish -> idSet.contains(dish.getId()))
+                    .toList();
+        } finally {
+            dishReadLock.unlock();
+        }
+    }
+
+    @Override
     public void addCacheEntry(Dish dish) {
         dishWriteLock.lock();
         try {
@@ -87,6 +103,21 @@ public class DishesCacheServiceImpl implements DishesCacheService {
         }
         finally {
             dishWriteLock.unlock();
+        }
+    }
+
+    @Override
+    public BigDecimal getDishCost(int dishId){
+        dishReadLock.lock();
+        try {
+            return inMemoryDishes.stream()
+                .filter(dish -> dish.getId() == dishId)
+                .map(Dish::getPrice)
+                .findFirst()
+                .orElse(BigDecimal.ZERO); //assume ZERO is invalid value
+        }
+        finally {
+            dishReadLock.unlock();
         }
     }
 
