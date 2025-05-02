@@ -56,7 +56,7 @@ public class DishesController(ILogger<DishesController> logger, IDishesCacheServ
             return Conflict(ErrorMessages.Conflict);
         }
         var dish = result.ResultValue as Dish;
-        return CreatedAtAction(nameof(GetDish), new { id = dish.DishId }, dish);
+        return Ok(dish.DishId);
     }
 
     //PUT api/Dishes/UpdateDish
