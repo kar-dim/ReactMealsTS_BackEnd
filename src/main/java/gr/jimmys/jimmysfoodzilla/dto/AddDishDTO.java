@@ -11,18 +11,18 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AddDishDTO {
-    @JsonProperty("Dish_name")
+    @JsonProperty("dish_name")
     private String dishName;
 
-    @JsonProperty("Dish_description")
+    @JsonProperty("dish_description")
     private String dishDescription;
 
-    @JsonProperty("Price")
+    @JsonProperty("price")
     public BigDecimal price;
 
-    @JsonProperty("Dish_extended_info")
+    @JsonProperty("dish_extended_info")
     private String dishExtendedInfo;
 
-    @JsonProperty("Dish_image_base64")
+    @JsonProperty("dish_image_base64")
     private String dishImageBase64;
 }

@@ -42,18 +42,15 @@ public class DishServiceImpl implements DishService {
     public Result addDish(AddDishDTO dto) {
         if (cache.existDishWithoutId(dto))
             return Result.failure("Dish Already Exists");
-
         var imageBytes = new Holder<byte[]>();
         var fileName = generateDishFilename(dto.getDishName(), dto.getDishImageBase64(), imageBytes);
         if (fileName == null)
             return Result.failure("Invalid Image Data");
         var dish = AddDishDTOMapping.addDishDTOtoDish(dto);
         dish.setUrl(fileName);
-
         dish = dishRepository.save(dish);
         cache.addCacheEntry(dish);
         imageService.saveImage(fileName, imageBytes.getValue());
-
         return Result.success(dish);
     }
 
@@ -62,19 +59,15 @@ public class DishServiceImpl implements DishService {
         var existingDish = cache.getDish(dto.getDishId());
         if (existingDish == null)
             return Result.failure("Dish with ID " + dto.getDishId() + " not found");
-
         var imageBytes = new Holder<byte[]>();
         String fileName = generateDishFilename(dto.getDishName(), dto.getDishImageBase64(), imageBytes);
         if (fileName == null)
             return Result.failure("Invalid Image Data");
-
         var newDish = AddDishDTOMapping.addDishDTOWithIdtoDish(dto);
         newDish.setUrl(fileName);
-
         newDish = dishRepository.save(newDish); //will update
         cache.updateCacheEntry(newDish);
         imageService.replaceImage(existingDish.getUrl(), fileName, imageBytes.getValue());
-
         return Result.success();
     }
 
@@ -83,11 +76,9 @@ public class DishServiceImpl implements DishService {
         var dish = cache.getDish(id);
         if (dish == null)
             return Result.failure("Could not delete dish with ID: " + id + ", it does not exist");
-
         cache.deleteCacheEntry(id);
         dishRepository.delete(dish);
         imageService.deleteImage(dish.getUrl());
-
         return Result.success();
     }
 }

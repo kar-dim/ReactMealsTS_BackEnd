@@ -3,12 +3,11 @@ package gr.jimmys.jimmysfoodzilla.services.impl;
 import gr.jimmys.jimmysfoodzilla.services.api.DishImageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -18,10 +17,7 @@ import java.util.Map;
 public class DishImageServiceImpl implements DishImageService {
     private final Logger logger = LoggerFactory.getLogger(DishImageServiceImpl.class);
 
-    private static final String DISH_IMAGES_PATH = "dishimages/";
-
-    @Autowired
-    ResourceLoader resourceLoader;
+    private static final Path IMAGE_FOLDER = Paths.get("uploads", "dishimages");
 
     private static final HashMap<byte[], String> knownMagicBytes;
 
@@ -45,8 +41,7 @@ public class DishImageServiceImpl implements DishImageService {
     @Override
     public void deleteImage(String fileName) {
         try {
-            var staticFolderPath = Paths.get(resourceLoader.getResource("classpath:static").getURI());
-            Files.deleteIfExists(staticFolderPath.resolve(DISH_IMAGES_PATH + fileName));
+            Files.deleteIfExists(IMAGE_FOLDER.resolve(fileName));
         } catch (IOException ioe) {
             //it's OK, image file is not critical error
             logger.error("Could not remove file with name: {}", fileName);
@@ -56,8 +51,7 @@ public class DishImageServiceImpl implements DishImageService {
     @Override
     public void saveImage(String fileName, byte[] data) {
         try {
-            var staticFolderPath = Paths.get(resourceLoader.getResource("classpath:static").getURI());
-            Files.write(staticFolderPath.resolve(DISH_IMAGES_PATH + fileName), data);
+            Files.write(IMAGE_FOLDER.resolve(fileName), data);
         } catch (IOException e) {
             //it's OK, image file is not critical error
             logger.error("Could not create static image file with file name: {}", fileName);
