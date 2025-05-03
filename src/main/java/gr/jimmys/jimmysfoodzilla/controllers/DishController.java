@@ -22,6 +22,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
+import static gr.jimmys.jimmysfoodzilla.common.ErrorMessages.*;
+
 @RestController
 @RequestMapping("/api/Dishes")
 public class DishController {
@@ -73,7 +75,14 @@ public class DishController {
         var result = dishService.addDish(newDish);
         if (!result.isSuccess()) {
             logger.error("AddDish failed: {}", result.error());
-            throw new ResponseStatusException(HttpStatus.CONFLICT, ErrorMessages.CONFLICT);
+            switch(result.error()){
+               case CONFLICT:
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, CONFLICT);
+                case BAD_DISH_PRICE_REQUEST:
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, BAD_DISH_PRICE_REQUEST);
+                default:
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, BAD_REQUEST);
+            }
         }
         var dish = (Dish) result.ResultValue();
         return ResponseEntity.ok(dish.getId());
@@ -84,7 +93,14 @@ public class DishController {
         var result = dishService.updateDish(dto);
         if (!result.isSuccess()) {
             logger.error("UpdateDish failed: {}", result.error());
-            return ResponseEntity.badRequest().build();
+            switch(result.error()){
+                case NOT_FOUND:
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, NOT_FOUND);
+                case BAD_DISH_PRICE_REQUEST:
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, BAD_DISH_PRICE_REQUEST);
+                default:
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, BAD_REQUEST);
+            }
         }
         return ResponseEntity.ok().build();
     }

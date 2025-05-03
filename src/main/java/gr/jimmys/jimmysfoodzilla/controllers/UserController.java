@@ -138,8 +138,7 @@ public class UserController {
                     .asEmpty();
             //DELETE ok status is 204
             if (response.getStatus() != 204) {
-                logger.error("Error in ManagementAPI api/v2/users/" + userId + " HTTP DELETE request, could not delete user\n" +
-                        "Reason: STATUS CODE: " + response.getStatus() + " STATUS TEXT: " + response.getStatusText());
+                logger.error("Error in ManagementAPI api/v2/users/{} HTTP DELETE request, could not delete user\nReason: STATUS CODE: {} STATUS TEXT: {}", userId, response.getStatus(), response.getStatusText());
                 return ResponseEntity.internalServerError().build();
             }
             //delete user from db? for now not..

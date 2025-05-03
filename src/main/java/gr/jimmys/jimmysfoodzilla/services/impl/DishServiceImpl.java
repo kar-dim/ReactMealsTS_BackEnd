@@ -14,12 +14,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.Base64;
+
+import static gr.jimmys.jimmysfoodzilla.common.ErrorMessages.*;
 
 @Service
 public class DishServiceImpl implements DishService {
     private final Logger logger = LoggerFactory.getLogger(DishServiceImpl.class);
 
+    private static final BigDecimal maxPrice = BigDecimal.valueOf(256);
     @Autowired
     DishRepository dishRepository;
 
@@ -41,11 +45,13 @@ public class DishServiceImpl implements DishService {
     @Override
     public Result addDish(AddDishDTO dto) {
         if (cache.existDishWithoutId(dto))
-            return Result.failure("Dish Already Exists");
+            return Result.failure(CONFLICT);
+        if (dto.getPrice() == null || dto.getPrice().compareTo(BigDecimal.ZERO) <= 0 || dto.getPrice().compareTo(maxPrice) > 0)
+            return Result.failure(BAD_DISH_PRICE_REQUEST);
         var imageBytes = new Holder<byte[]>();
         var fileName = generateDishFilename(dto.getDishName(), dto.getDishImageBase64(), imageBytes);
         if (fileName == null)
-            return Result.failure("Invalid Image Data");
+            return Result.failure(BAD_REQUEST);
         var dish = AddDishDTOMapping.addDishDTOtoDish(dto);
         dish.setUrl(fileName);
         dish = dishRepository.save(dish);
@@ -58,11 +64,13 @@ public class DishServiceImpl implements DishService {
     public Result updateDish(AddDishDTOWithId dto) {
         var existingDish = cache.getDish(dto.getDishId());
         if (existingDish == null)
-            return Result.failure("Dish with ID " + dto.getDishId() + " not found");
+            return Result.failure(NOT_FOUND);
+        if (dto.getPrice() == null || dto.getPrice().compareTo(BigDecimal.ZERO) <= 0 || dto.getPrice().compareTo(maxPrice) > 0)
+            return Result.failure(BAD_DISH_PRICE_REQUEST);
         var imageBytes = new Holder<byte[]>();
         String fileName = generateDishFilename(dto.getDishName(), dto.getDishImageBase64(), imageBytes);
         if (fileName == null)
-            return Result.failure("Invalid Image Data");
+            return Result.failure(BAD_REQUEST);
         var newDish = AddDishDTOMapping.addDishDTOWithIdtoDish(dto);
         newDish.setUrl(fileName);
         newDish = dishRepository.save(newDish); //will update
