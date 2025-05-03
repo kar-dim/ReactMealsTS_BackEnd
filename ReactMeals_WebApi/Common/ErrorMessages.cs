@@ -7,5 +7,7 @@
         public const string Unauthorized = "You are not authorized to access this resource.";
         public const string Conflict = "A conflict occurred while processing the request.";
         public const string BadRequest = "The request could not be understood or was missing required parameters.";
+        public const string BadDishPriceRequest = "Dish price is not valid";
+        public const string BadUpdateDishRequest = "Dish ID not found";
     }
 }

@@ -47,13 +47,18 @@ public class DishesController(ILogger<DishesController> logger, IDishesCacheServ
     //only for Admins, to add new dish to the database
     [Authorize(AuthenticationSchemes = "Default", Policy = "AdminPolicy")]
     [HttpPost("AddDish")]
-    public async Task<ActionResult<Dish>> AddDish([FromBody] AddDishDTO dto)
+    public async Task<IActionResult> AddDish([FromBody] AddDishDTO dto)
     {
         var result = await dishService.AddDishAsync(dto);
         if (!result.IsSuccess)
         {
             logger.LogError("AddDish failed: {Error}", result.Error);
-            return Conflict(ErrorMessages.Conflict);
+            return result.Error switch
+            {
+                ErrorMessages.Conflict => Conflict(ErrorMessages.Conflict),
+                ErrorMessages.BadDishPriceRequest => BadRequest(ErrorMessages.BadDishPriceRequest),
+                _ => BadRequest(ErrorMessages.BadRequest),
+            };
         }
         var dish = result.ResultValue as Dish;
         return Ok(dish.DishId);
@@ -69,7 +74,12 @@ public class DishesController(ILogger<DishesController> logger, IDishesCacheServ
         if (!result.IsSuccess)
         {
             logger.LogError("UpdateDish failed: {Error}", result.Error);
-            return BadRequest(ErrorMessages.BadRequest);
+            return result.Error switch
+            {
+                ErrorMessages.BadUpdateDishRequest => BadRequest(ErrorMessages.BadUpdateDishRequest),
+                ErrorMessages.BadDishPriceRequest => BadRequest(ErrorMessages.BadDishPriceRequest),
+                _ => BadRequest(ErrorMessages.BadRequest),
+            };
         }
         return Ok();
     }

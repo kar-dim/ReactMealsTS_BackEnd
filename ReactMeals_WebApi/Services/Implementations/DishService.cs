@@ -1,11 +1,12 @@
-﻿using ReactMeals_WebApi.Common;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using ReactMeals_WebApi.Common;
 using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Repositories;
 using ReactMeals_WebApi.Services.Interfaces;
 
 namespace ReactMeals_WebApi.Services.Implementations
 {
-    public class DishService(DishRepository dishRepo, IDishesCacheService cache, IDishImageService imageService, ILogger<DishService> logger) : IDishService
+    public class DishService(DishRepository dishRepo, IDishesCacheService cache, IDishImageService imageService) : IDishService
     {
         private string GenerateDishFilename(string dishName, string dishB64, out byte[] imageBytes)
         {
@@ -19,12 +20,13 @@ namespace ReactMeals_WebApi.Services.Implementations
         //Create the dish, write to db
         public async Task<Result> AddDishAsync(AddDishDTO dto)
         {
+            if (dto.Price <= 0 || dto.Price > 256)
+                return Result.Failure(ErrorMessages.BadDishPriceRequest);
             if (cache.GetDishByValues(dto) != null)
-                return Result.Failure("Dish already exists");
-
+                return Result.Failure(ErrorMessages.Conflict);
             string fileName = GenerateDishFilename(dto.DishName, dto.DishImageBase64, out byte[] imageBytes);
             if (fileName == null)
-                return Result.Failure("Invalid Image Data");
+                return Result.Failure(ErrorMessages.BadRequest);
             
             var dish = AddDishDTOMapping.AddDishDTOtoDish(dto);
             dish.Dish_url = fileName;
@@ -41,11 +43,12 @@ namespace ReactMeals_WebApi.Services.Implementations
         {
             var existingDish = cache.GetDishById(dto.DishId);
             if (existingDish == null)
-                return Result.Failure($"Dish with ID {dto.DishId} not found");
-
+                return Result.Failure(ErrorMessages.BadUpdateDishRequest + ": " + dto.DishId);
+            if (dto.Price <= 0 || dto.Price > 256)
+                return Result.Failure(ErrorMessages.BadDishPriceRequest);
             string fileName = GenerateDishFilename(dto.DishName, dto.DishImageBase64, out byte[] imageBytes);
             if (fileName == null)
-                return Result.Failure("Invalid Image Data");
+                return Result.Failure(ErrorMessages.BadRequest);
 
             var newDish = AddDishDTOMapping.AddDishDTOWithIdtoDish(dto);
             newDish.Dish_url = fileName;
