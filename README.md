@@ -22,14 +22,16 @@ This repository contains the **backend** implementation (in both .NET and Java) 
 ### 🔹 .NET Core (default)
 
 - Uses EF Core and SQL Server.
-- Auth0 secret stored in a plain text file `m2m_secret.txt` at the root of the project (contains ONLY the Auth0 M2M client secret value).
+- Auth0 secret must stored in a plain text file `m2m_secret.txt` at the root of the project (should contain ONLY the Auth0 M2M client secret value).
 
 ### 🔸 Java Spring Boot (branch: `spring`)
 
-- Uses Spring Boot with JPA (Hibernate) + HikariCP, by default connects to the same local MS SQL Server as the .NET implementation (uses different database)
-- Auth0 secret and its various properties are stored in a `secret.properties` file (excluded from version control).
+- Uses Spring Boot with JPA (Hibernate) + HikariCP, by default connects to the same local MS SQL Server as the .NET implementation (uses different database).
+- Auth0 secret and its various properties should be stored in a `secret.properties` file.
 
-#### Auth0 Configuration (`secret.properties`)
+**Note: for both technologies, the above Auth0 files are excluded from version control for security reasons, they must be created manually**
+
+#### Auth0 Configuration (`secret.properties`) for Spring implementation
 
 Place this file at:
 
