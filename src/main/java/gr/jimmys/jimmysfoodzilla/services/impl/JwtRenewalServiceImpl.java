@@ -93,7 +93,7 @@ public class JwtRenewalServiceImpl implements JwtRenewalService {
         try {
             if (jwkSet == null || audienceToCheck == null) //internal problem...
                 return HttpStatus.INTERNAL_SERVER_ERROR;
-            if (token.length() < 8)
+            if (token == null || !token.startsWith("Bearer "))
                 return HttpStatus.BAD_REQUEST; //bad token value (avoid substring crash)
             // Extract the JWT token
             var signedJWT = SignedJWT.parse(token.substring(7)); //skip "Bearer " prefix

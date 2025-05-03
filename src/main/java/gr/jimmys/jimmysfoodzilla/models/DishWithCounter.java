@@ -1,5 +1,6 @@
 package gr.jimmys.jimmysfoodzilla.models;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -10,6 +11,7 @@ import java.math.BigDecimal;
 @EqualsAndHashCode(callSuper = true)
 @Data
 public class DishWithCounter extends Dish {
+    @JsonProperty("dish_counter")
     private int dishCounter;
 
     public DishWithCounter(int id, String dishName, String desc, BigDecimal price, String extInfo, String url, int dishCounter) {

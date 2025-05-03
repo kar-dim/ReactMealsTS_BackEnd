@@ -1,12 +1,14 @@
 package gr.jimmys.jimmysfoodzilla.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import gr.jimmys.jimmysfoodzilla.dto.AddDishDTO;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -52,6 +54,13 @@ public class Dish {
     @Override
     public int hashCode() {
         return this.id; //why not? ID -> distinct value..
+    }
+
+    public boolean equalsExceptId(AddDishDTO dto) {
+        return Objects.equals(name, dto.getDishName()) &&
+                Objects.equals(url, dto.getDishImageBase64()) &&
+                Objects.equals(description, dto.getDishDescription()) &&
+                Objects.equals(extendedInfo, dto.getDishExtendedInfo());
     }
 }
 

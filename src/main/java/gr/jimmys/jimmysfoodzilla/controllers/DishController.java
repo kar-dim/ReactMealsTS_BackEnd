@@ -109,16 +109,10 @@ public class DishController {
     //Authorized, default scheme
     @GetMapping("/GetUserOrders/{userId}")
     public ResponseEntity<UserOrdersDTO> getUserOrders(@RequestHeader(HttpHeaders.AUTHORIZATION) String token, @PathVariable("userId") String userId) {
-        if (token == null || !token.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-        var tokenValidationStatus = jwtRenewalService.validateToken(token, audience);
-        if (tokenValidationStatus != HttpStatus.OK)
-            return ResponseEntity.status(tokenValidationStatus).build();
-
+        var validationResult = jwtRenewalService.validateToken(token, audience);
+        if (validationResult != HttpStatus.OK)
+            return ResponseEntity.status(validationResult).build();
         //userId token check ok, we should retrieve this user's orders
-        //TODO!
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        return ResponseEntity.ok(orderService.getUserOrders(userId));
     }
 }
