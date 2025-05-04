@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
-using Microsoft.IdentityModel.Tokens;
 using ReactMeals_WebApi.Contexts;
 using ReactMeals_WebApi.Repositories;
 using ReactMeals_WebApi.Services.Implementations;
@@ -12,9 +10,17 @@ using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
+//common configuration parameters
+var corsPolicyName = "allowFrontendOnly";
+var m2mDomain = builder.Configuration["Auth0:M2M_Domain"];
+var defaultDomain = builder.Configuration["Auth0:Domain"];
+var m2mAudience = builder.Configuration["Auth0:M2M_Audience"];
+var defaultAudience = builder.Configuration["Auth0:Audience"];
+string[] allowedCorsOrigins = ["http://localhost:3000", "https://react-meals-ts-front-end.vercel.app"];
+string[] allowedHeaders = ["X-Requested-With", "Content-Type", "Authorization", "ngrok-skip-browser-warning"];
+
 //db context (read connection string from appsettings)
-builder.Services
-    .AddDbContext<MainDbContext>(options =>
+builder.Services.AddDbContext<MainDbContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("JimmysFoodzillaConnectionString")));
 //reposistories
 builder.Services.AddScoped<TokenRepository>();
@@ -25,53 +31,19 @@ builder.Services.AddScoped<UserRepository>();
 // Add required services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-//builder.Services.AddSwaggerGen();
 
 //cors (test only + frontend with VERCEL)
-var allowFrontendOnly = "allowFrontendOnly";
-builder.Services
-    .AddCors(options =>
-    {
-        options.AddPolicy(name: allowFrontendOnly, policy =>
-        {
-            policy.WithOrigins("http://localhost:3000", "https://react-meals-ts-front-end.vercel.app")
-                .AllowAnyMethod()
-                .WithHeaders("X-Requested-With", "Content-Type", "Authorization", "ngrok-skip-browser-warning");
-        });
-    });
+builder.Services.AddCors(options => options.AddPolicy(name: corsPolicyName, policy => 
+        policy.WithOrigins(allowedCorsOrigins).AllowAnyMethod().WithHeaders(allowedHeaders)));
 
-// JWT (Auth0)
+// JWT (Auth0), Default authorization scheme + M2M Auth0 API sending post-register action data
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    // Default authorization scheme
-    .AddJwtBearer("Default", options =>
-    {
-        options.Authority = $"https://{builder.Configuration["Auth0:Domain"]}/";
-        options.Audience = builder.Configuration["Auth0:Audience"];
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            NameClaimType = ClaimTypes.NameIdentifier
-        };
-    })
-    // Authorization scheme for M2M Auth0 API sending post-register action data
-    // It uses different access tokens than the main application
-    .AddJwtBearer("M2M_UserRegister", options =>
-    {
-        options.Authority = $"https://{builder.Configuration["Auth0:M2M_Domain"]}/";
-        options.Audience = builder.Configuration["Auth0:M2M_Audience"];
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            NameClaimType = ClaimTypes.NameIdentifier
-        };
-    });
+    .AddJwtBearer("Default", options => ConfigureJwt(options, defaultDomain, defaultAudience))
+    .AddJwtBearer("M2M_UserRegister", options => ConfigureJwt(options, m2mDomain, m2mAudience));
 
 //authorization for policies (admin etc)
 //check the access token's "permission" scope and search for the "admin:admin" claim
-builder.Services
-    .AddAuthorizationBuilder()
-    .AddPolicy("AdminPolicy", policy =>
-    {
-        policy.RequireClaim("permissions", "admin:admin");
-    });
+builder.Services.AddAuthorizationBuilder().AddPolicy("AdminPolicy", policy => policy.RequireClaim("permissions", "admin:admin"));
 
 /* custom services */
 //ngrok
@@ -92,19 +64,10 @@ builder.Services.AddHostedService(provider => provider.GetService<IJwtRenewalSer
 builder.Services.AddSingleton<IDishesCacheService, DishesCacheService>();
 builder.Services.AddHostedService(provider => provider.GetService<IDishesCacheService>());
 //RestSharp singleton client
-builder.Services.AddSingleton(provider => new RestClient("https://" + provider.GetRequiredService<IConfiguration>()["Auth0:M2M_Domain"]));
+builder.Services.AddSingleton(provider => new RestClient("https://" + m2mDomain));
 
 var app = builder.Build();
-
-/*
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-*/
-
-app.UseCors(allowFrontendOnly);
+app.UseCors(corsPolicyName);
 
 //for static images
 app.UseStaticFiles(new StaticFileOptions()
@@ -118,3 +81,10 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
+
+void ConfigureJwt(JwtBearerOptions options, string domain, string audience)
+{
+    options.Authority = $"https://{domain}/";
+    options.Audience = audience;
+    options.TokenValidationParameters = new() { NameClaimType = ClaimTypes.NameIdentifier };
+}
