@@ -17,7 +17,7 @@ var defaultDomain = builder.Configuration["Auth0:Domain"];
 var m2mAudience = builder.Configuration["Auth0:M2M_Audience"];
 var defaultAudience = builder.Configuration["Auth0:Audience"];
 string[] allowedCorsOrigins = ["http://localhost:3000", "https://react-meals-ts-front-end.vercel.app"];
-string[] allowedHeaders = ["X-Requested-With", "Content-Type", "Authorization", "ngrok-skip-browser-warning"];
+string[] allowedCorsHeaders = ["X-Requested-With", "Content-Type", "Authorization", "ngrok-skip-browser-warning"];
 
 //db context (read connection string from appsettings)
 builder.Services.AddDbContext<MainDbContext>(options =>
@@ -34,7 +34,7 @@ builder.Services.AddEndpointsApiExplorer();
 
 //cors (test only + frontend with VERCEL)
 builder.Services.AddCors(options => options.AddPolicy(name: corsPolicyName, policy => 
-        policy.WithOrigins(allowedCorsOrigins).AllowAnyMethod().WithHeaders(allowedHeaders)));
+        policy.WithOrigins(allowedCorsOrigins).AllowAnyMethod().WithHeaders(allowedCorsHeaders)));
 
 // JWT (Auth0), Default authorization scheme + M2M Auth0 API sending post-register action data
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
