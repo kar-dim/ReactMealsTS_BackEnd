@@ -14,7 +14,6 @@ import java.util.List;
 @Entity
 @Table(name = "Orders")
 public class Order {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int Id;
@@ -30,10 +29,4 @@ public class Order {
     //OrderItem reference
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> orderItems;
-
-    public Order(List<OrderItem> orderItems, User user, BigDecimal totalCost) {
-        this.orderItems = orderItems;
-        this.user = user;
-        this.totalCost = totalCost;
-    }
 }

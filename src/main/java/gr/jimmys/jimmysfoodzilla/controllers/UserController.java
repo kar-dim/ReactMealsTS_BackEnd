@@ -21,7 +21,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/Users")
@@ -67,9 +66,8 @@ public class UserController {
             var usersToReturn = users.stream()
                     .filter(Objects::nonNull)
                     .filter(Auth0UserDeserialize::isValidUser)
-                    //.filter(user -> !"admin".equals(user.getNickname()))
                     .map(user -> new User(user.getUserId(), user.getEmail(), user.getUserMetadata().getName(), user.getUserMetadata().getLastName(), user.getUserMetadata().getAddress()))
-                    .collect(Collectors.toList());
+                    .toList();
             return new ResponseEntity<>(usersToReturn, HttpStatus.OK);
         } catch (UnirestException e) {
             logger.error("Error in ManagementAPI api/v2/users HTTP GET request");
