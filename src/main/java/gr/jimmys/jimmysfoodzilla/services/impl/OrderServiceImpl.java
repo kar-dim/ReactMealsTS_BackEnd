@@ -28,7 +28,6 @@ import static java.util.stream.Collectors.toMap;
 
 @Service
 public class OrderServiceImpl implements OrderService {
-    private final Logger logger = LoggerFactory.getLogger(OrderServiceImpl.class);
 
     @Autowired
     OrderRepository orderRepository;
