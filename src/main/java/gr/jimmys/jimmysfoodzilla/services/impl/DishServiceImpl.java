@@ -44,7 +44,9 @@ public class DishServiceImpl implements DishService {
 
     @Override
     public Result addDish(AddDishDTO dto) {
-        if (cache.existDishWithoutId(dto))
+        if (dto.getDishName() == null)
+            return Result.failure(BAD_DISH_NAME_REQUEST);
+        if (cache.existDishByName(dto.getDishName()))
             return Result.failure(CONFLICT);
         if (dto.getPrice() == null || dto.getPrice().compareTo(BigDecimal.ZERO) <= 0 || dto.getPrice().compareTo(maxPrice) > 0)
             return Result.failure(BAD_DISH_PRICE_REQUEST);

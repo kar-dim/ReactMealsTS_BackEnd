@@ -55,12 +55,5 @@ public class Dish {
     public int hashCode() {
         return this.id; //why not? ID -> distinct value..
     }
-
-    public boolean equalsExceptId(AddDishDTO dto) {
-        return Objects.equals(name, dto.getDishName()) &&
-                Objects.equals(url, dto.getDishImageBase64()) &&
-                Objects.equals(description, dto.getDishDescription()) &&
-                Objects.equals(extendedInfo, dto.getDishExtendedInfo());
-    }
 }
 

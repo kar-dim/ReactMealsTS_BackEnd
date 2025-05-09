@@ -98,7 +98,7 @@ public class DishesCacheServiceImpl implements DishesCacheService {
     }
 
     @Override
-    public boolean existDishWithoutId(AddDishDTO dishToCheck) {
-        return withDishReadLock(() -> inMemoryDishes.stream().anyMatch(d -> d.equalsExceptId(dishToCheck)));
+    public boolean existDishByName(String dishNameToCheck) {
+        return withDishReadLock(() -> inMemoryDishes.stream().anyMatch(d -> d.getName().equalsIgnoreCase(dishNameToCheck)));
     }
 }

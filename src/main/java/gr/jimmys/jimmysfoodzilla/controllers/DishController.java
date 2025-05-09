@@ -80,6 +80,8 @@ public class DishController {
                     throw new ResponseStatusException(HttpStatus.CONFLICT, CONFLICT);
                 case BAD_DISH_PRICE_REQUEST:
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, BAD_DISH_PRICE_REQUEST);
+                case BAD_DISH_NAME_REQUEST:
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, BAD_DISH_NAME_REQUEST);
                 default:
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, BAD_REQUEST);
             }
