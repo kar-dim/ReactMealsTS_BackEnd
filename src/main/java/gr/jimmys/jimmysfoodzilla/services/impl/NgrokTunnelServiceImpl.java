@@ -24,15 +24,15 @@ public class NgrokTunnelServiceImpl implements TunnelService {
 
     @PostConstruct
     @Override
-    public void init() {
+    public void startTunnel() {
         //don't run ngrok in production
         if (!isDev)
             return;
         Thread ngrokThread = new Thread(() -> {
             try {
                 logger.info("START service");
-                ProcessBuilder ngrokKill = new ProcessBuilder(List.of("taskkill", "/f", "/im", "ngrok.exe"));
-                ProcessBuilder ngrokStart = new ProcessBuilder(List.of("ngrok", "http", "--domain=" + ngrokUrl, String.valueOf(port)));
+                var ngrokKill = new ProcessBuilder(List.of("taskkill", "/f", "/im", "ngrok.exe"));
+                var ngrokStart = new ProcessBuilder(List.of("ngrok", "http", "--domain=" + ngrokUrl, String.valueOf(port)));
                 //kill (if exists)
                 Process p = ngrokKill.start();
                 int code = p.waitFor();
@@ -41,7 +41,7 @@ public class NgrokTunnelServiceImpl implements TunnelService {
                     logger.info("TASKKILL successfully terminated ngrok instances");
                 } //else don't care, no ngrok instances were killed
                 //start
-                p = ngrokStart.start();
+                ngrokStart.start();
                 logger.info("STARTED successfully");
             } catch (Exception e) {
                 logger.error("ERROR: {}", e.getMessage());
