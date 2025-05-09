@@ -7,7 +7,7 @@ namespace ReactMeals_WebApi.Services.Interfaces;
 public interface IDishesCacheService : IHostedService, IDisposable
 {
     public Dish GetDishById(int dishId);
-    public Dish GetDishByValues(AddDishDTO dish);
+    public Dish GetDishByName(string dishNameToCheck);
     public List<Dish> GetDishes();
     public decimal? GetDishCost(int dishId);
     public void AddCacheEntry(Dish dish);

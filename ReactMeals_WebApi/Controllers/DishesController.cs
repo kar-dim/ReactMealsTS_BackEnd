@@ -56,7 +56,7 @@ public class DishesController(ILogger<DishesController> logger, IDishesCacheServ
             return result.Error switch
             {
                 ErrorMessages.Conflict => Conflict(ErrorMessages.Conflict),
-                ErrorMessages.BadDishPriceRequest => BadRequest(ErrorMessages.BadDishPriceRequest),
+                ErrorMessages.BadDishPriceRequest or ErrorMessages.BadDishNameRequest => BadRequest(result.Error),
                 _ => BadRequest(ErrorMessages.BadRequest),
             };
         }

@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
-using ReactMeals_WebApi.Common;
+﻿using ReactMeals_WebApi.Common;
 using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Repositories;
 using ReactMeals_WebApi.Services.Interfaces;
@@ -20,9 +19,11 @@ namespace ReactMeals_WebApi.Services.Implementations
         //Create the dish, write to db
         public async Task<Result> AddDishAsync(AddDishDTO dto)
         {
+            if (dto.DishName == null)
+                return Result.Failure(ErrorMessages.BadDishNameRequest);
             if (dto.Price <= 0 || dto.Price > 256)
                 return Result.Failure(ErrorMessages.BadDishPriceRequest);
-            if (cache.GetDishByValues(dto) != null)
+            if (cache.GetDishByName(dto.DishName) != null)
                 return Result.Failure(ErrorMessages.Conflict);
             string fileName = GenerateDishFilename(dto.DishName, dto.DishImageBase64, out byte[] imageBytes);
             if (fileName == null)

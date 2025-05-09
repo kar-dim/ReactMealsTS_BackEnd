@@ -1,5 +1,4 @@
 ﻿using ReactMeals_WebApi.Contexts;
-using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
 using ReactMeals_WebApi.Services.Interfaces;
 
@@ -20,22 +19,17 @@ public class DishesCacheService : IDishesCacheService
         inMemoryDishes = [.. mainDbContext.Dishes.OrderBy(dish => dish.DishId)];
         dishesCacheLock = new ReaderWriterLockSlim();
     }
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
-    }
 
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        await Task.CompletedTask;
-    }
+    public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    public Dish GetDishById(int dishId)
+    public async Task StopAsync(CancellationToken cancellationToken) => await Task.CompletedTask;
+
+    private T WithDishReadLock<T>(Func<T> func)
     {
         dishesCacheLock.EnterReadLock();
         try
         {
-            return inMemoryDishes.Find(dish => dish.DishId == dishId);
+            return func();
         }
         finally
         {
@@ -43,55 +37,12 @@ public class DishesCacheService : IDishesCacheService
         }
     }
 
-    public Dish GetDishByValues(AddDishDTO dish)
-    {
-        dishesCacheLock.EnterReadLock();
-        try
-        {
-            return inMemoryDishes.FirstOrDefault(x =>
-            x.Dish_name == dish.DishName &&
-            x.Dish_description == dish.DishDescription &&
-            x.Price == dish.Price &&
-            x.Dish_extended_info == dish.DishExtendedInfo);
-        }
-        finally
-        {
-            dishesCacheLock.ExitReadLock();
-        }
-    }
-
-    public List<Dish> GetDishes()
-    {
-        dishesCacheLock.EnterReadLock();
-        try
-        {
-            return inMemoryDishes;
-        }
-        finally
-        {
-            dishesCacheLock.ExitReadLock();
-        }
-    }
-
-    public decimal? GetDishCost(int dishId)
-    {
-        dishesCacheLock.EnterReadLock();
-        try
-        {
-           return inMemoryDishes.Find(dish => dish.DishId == dishId)?.Price;
-        }
-        finally
-        {
-            dishesCacheLock.ExitReadLock();
-        }
-    }
-
-    public void AddCacheEntry(Dish dish)
+    private void WithDishWriteLock(Action action)
     {
         dishesCacheLock.EnterWriteLock();
         try
         {
-            inMemoryDishes.Add(dish);
+            action();
         }
         finally
         {
@@ -99,38 +50,30 @@ public class DishesCacheService : IDishesCacheService
         }
     }
 
-    public void DeleteCacheEntry(int dishId)
-    {
-        dishesCacheLock.EnterWriteLock();
-        try
-        {
-            Dish dishToRemove = inMemoryDishes.FirstOrDefault(dish => dish.DishId == dishId);
-            if (dishToRemove != null)
-                inMemoryDishes.Remove(dishToRemove);
-        }
-        finally
-        {
-            dishesCacheLock.ExitWriteLock();
-        }
-    }
+    public Dish GetDishById(int dishId) => WithDishReadLock(() => inMemoryDishes.Find(dish => dish.DishId == dishId));
 
-    public void UpdateCacheEntry(Dish dish)
-    {
-        dishesCacheLock.EnterWriteLock();
-        try
-        {
-            int dishIndex = inMemoryDishes.FindIndex(d => d.DishId == dish.DishId);
-            if (dishIndex != -1)
-                inMemoryDishes[dishIndex] = dish;
-        }
-        finally
-        {
-            dishesCacheLock.ExitWriteLock();
-        }
-    }
+    public Dish GetDishByName(string dishNameToCheck) => WithDishReadLock(() => 
+        inMemoryDishes.FirstOrDefault(x => string.Equals(x.Dish_name, dishNameToCheck, StringComparison.OrdinalIgnoreCase)));
 
-    public void Dispose()
+    public List<Dish> GetDishes() => WithDishReadLock(() => inMemoryDishes);
+
+    public decimal? GetDishCost(int dishId) => WithDishReadLock(() => inMemoryDishes.Find(dish => dish.DishId == dishId)?.Price);
+
+    public void AddCacheEntry(Dish dish) => WithDishWriteLock(() => inMemoryDishes.Add(dish));
+
+    public void DeleteCacheEntry(int dishId) => WithDishWriteLock(() =>
     {
-        GC.SuppressFinalize(this);
-    }
+        Dish dishToRemove = inMemoryDishes.FirstOrDefault(dish => dish.DishId == dishId);
+        if (dishToRemove != null)
+            inMemoryDishes.Remove(dishToRemove);
+    });
+
+    public void UpdateCacheEntry(Dish dish) => WithDishWriteLock(() =>
+    {
+        int dishIndex = inMemoryDishes.FindIndex(d => d.DishId == dish.DishId);
+        if (dishIndex != -1)
+            inMemoryDishes[dishIndex] = dish;
+    });
+
+    public void Dispose() => GC.SuppressFinalize(this);
 }

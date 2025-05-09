@@ -21,7 +21,7 @@ public class NgrokTunnelService(IConfiguration config, IServer server, IHostAppl
         hostApplicationLifetime.ApplicationStarted.Register(() => completionSource.TrySetResult());
         return completionSource.Task;
     }
-    public async Task StartTunnelAsync(string localUrl, string ngrokUrl, CancellationToken stoppingToken)
+    public async Task StartTunnelAsync(string localUrl, string tunnelUrl, CancellationToken stoppingToken)
     {
         try
         {
@@ -44,7 +44,7 @@ public class NgrokTunnelService(IConfiguration config, IServer server, IHostAppl
         {
             //call ngrok
             await Cli.Wrap("ngrok")
-                .WithArguments(args => args.Add("http").Add("--domain=" + ngrokUrl).Add(localUrl).Add("--log").Add("stdout"))
+                .WithArguments(args => args.Add("http").Add("--domain=" + tunnelUrl).Add(localUrl).Add("--log").Add("stdout"))
                 .WithStandardErrorPipe(PipeTarget.ToDelegate(s => logger.LogError(s)))
                 .ExecuteAsync(stoppingToken);
         }

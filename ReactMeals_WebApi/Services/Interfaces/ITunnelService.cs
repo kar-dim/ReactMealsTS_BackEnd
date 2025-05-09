@@ -3,5 +3,5 @@
 // Interface for the tunnel service
 public interface ITunnelService : IHostedService, IDisposable
 {
-    public Task StartTunnelAsync(string localUrl, string ngrokUrl, CancellationToken stoppingToken);
+    public Task StartTunnelAsync(string localUrl, string tunnelUrl, CancellationToken stoppingToken);
 }
