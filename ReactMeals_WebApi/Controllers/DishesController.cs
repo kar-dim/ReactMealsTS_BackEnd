@@ -33,12 +33,7 @@ public class DishesController(ILogger<DishesController> logger, IDishesCacheServ
     [HttpGet("GetDishes")]
     public ActionResult<IEnumerable<Dish>> GetDishes()
     {
-        var foundDishes = cache.GetDishes();
-        if (foundDishes.Count == 0)
-        {
-            logger.LogError("GetDishes: Could not find any dishes");
-            return NotFound(ErrorMessages.NotFound);
-        }
+        List<Dish> foundDishes = cache.GetDishes();
         logger.LogInformation("GetDishes: Returned all dishes. Length: {Length}", foundDishes.Count);
         return Ok(foundDishes);
     }
