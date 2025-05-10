@@ -41,12 +41,9 @@ public class UserController {
 
     @GetMapping("/GetUsers")
     public ResponseEntity<List<User>> getUsers() {
-        String mApiToken = jwtRenewalService.getManagementApiToken();
-        //check if management api token exists from the injected service
-        if (mApiToken == null || mApiToken.trim().isEmpty()) {
-            logger.error("ManagementAPI Token does not exist");
+        var mApiToken = getManagementApiToken();
+        if (mApiToken.isEmpty())
             return ResponseEntity.internalServerError().build();
-        }
         try {
             HttpResponse<List<Auth0UserDeserialize>> response = Unirest.get("https://" + auth0_domain + "/api/v2/users")
                     .header("Authorization", "Bearer " + mApiToken)
@@ -95,12 +92,9 @@ public class UserController {
 
     @PutMapping("/UpdateUser")
     public ResponseEntity<Void> updateUser(@RequestBody User newUser) {
-        String mApiToken = jwtRenewalService.getManagementApiToken();
-        //check if management api token exists from the injected service
-        if (mApiToken == null || mApiToken.trim().isEmpty()) {
-            logger.error("ManagementAPI Token does not exist");
+        var mApiToken = getManagementApiToken();
+        if (mApiToken.isEmpty())
             return ResponseEntity.internalServerError().build();
-        }
         try {
             var userToSend = new Auth0UserSerialize(newUser.getEmail(), new UserMetadata(newUser.getName(), newUser.getLastName(), newUser.getAddress()));
             HttpResponse<Empty> response = Unirest.patch("https://" + auth0_domain + "/api/v2/users/" + URLEncoder.encode(newUser.getUserId(), StandardCharsets.UTF_8))
@@ -124,12 +118,9 @@ public class UserController {
 
     @DeleteMapping("/DeleteUser/{userId}")
     public ResponseEntity<Void> deleteUser(@PathVariable("userId") String userId) {
-        String mApiToken = jwtRenewalService.getManagementApiToken();
-        //check if management api token exists from the injected service
-        if (mApiToken == null || mApiToken.trim().isEmpty()) {
-            logger.error("ManagementAPI Token does not exist");
+        var mApiToken = getManagementApiToken();
+        if (mApiToken.isEmpty())
             return ResponseEntity.internalServerError().build();
-        }
         try {
             HttpResponse<Empty> response = Unirest.delete("https://" + auth0_domain + "/api/v2/users/" + URLEncoder.encode(userId, StandardCharsets.UTF_8))
                     .header("Authorization", "Bearer " + mApiToken)
@@ -139,11 +130,20 @@ public class UserController {
                 logger.error("Error in ManagementAPI api/v2/users/{} HTTP DELETE request, could not delete user\nReason: STATUS CODE: {} STATUS TEXT: {}", userId, response.getStatus(), response.getStatusText());
                 return ResponseEntity.internalServerError().build();
             }
-            //delete user from db? for now not..
+            //delete user from db? for now not.
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (UnirestException e) {
             logger.error("Error in ManagementAPI api/v2/users HTTP DELETE request");
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    private String getManagementApiToken() {
+        var token = jwtRenewalService.getManagementApiToken();
+        if (token == null || token.trim().isEmpty()) {
+            logger.error("ManagementAPI Token does not exist");
+            return "";
+        }
+        return token;
     }
 }

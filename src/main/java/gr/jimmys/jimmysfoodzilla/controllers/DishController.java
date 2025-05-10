@@ -1,6 +1,5 @@
 package gr.jimmys.jimmysfoodzilla.controllers;
 
-import gr.jimmys.jimmysfoodzilla.common.ErrorMessages;
 import gr.jimmys.jimmysfoodzilla.dto.AddDishDTO;
 import gr.jimmys.jimmysfoodzilla.dto.AddDishDTOWithId;
 import gr.jimmys.jimmysfoodzilla.dto.UserOrdersDTO;
@@ -57,17 +56,9 @@ public class DishController {
 
     @GetMapping("/GetDishes")
     public ResponseEntity<List<Dish>> getDishes() {
-        try {
-            var foundDishes = cache.getDishes();
-            if (foundDishes.isEmpty()) {
-                logger.error("GetDishes: Could not find any dishes");
-                return ResponseEntity.notFound().build();
-            }
-            logger.info("GetDishes: Returned all dishes. Length: {}", foundDishes.size());
-            return new ResponseEntity<>(foundDishes, HttpStatus.OK);
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
+        var foundDishes = cache.getDishes();
+        logger.info("GetDishes: Returned all dishes. Length: {}", foundDishes.size());
+        return new ResponseEntity<>(foundDishes, HttpStatus.OK);
     }
 
     @PostMapping("/AddDish")
