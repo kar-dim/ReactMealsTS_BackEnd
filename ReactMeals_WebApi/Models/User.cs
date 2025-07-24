@@ -9,20 +9,20 @@ public class User
 
     public User(string user_id, string email, string name, string lastName, string address)
     {
+        SetProperties(user_id, email, name, lastName, address);
+    }
+    public void UpdateUser(User other)
+    {
+        SetProperties(other.User_Id, other.Email, other.Name, other.LastName, other.Address);
+    }
+
+    private void SetProperties(string user_id, string email, string name, string lastName, string address)
+    {
         User_Id = user_id;
         Email = email;
         Name = name;
         LastName = lastName;
         Address = address;
-    }
-
-    public void UpdateUser(User other)
-    {
-        User_Id = other.User_Id;
-        Email = other.Email;
-        Name = other.Name;
-        LastName = other.LastName;
-        Address = other.Address;
     }
 
     [Key]
