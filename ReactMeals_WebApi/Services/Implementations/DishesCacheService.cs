@@ -9,14 +9,14 @@ namespace ReactMeals_WebApi.Services.Implementations;
 //useful for bulk Get requests. After writing into the cache, controllers should immediately persist data into db
 public class DishesCacheService : IDishesCacheService
 {
-    private readonly MainDbContext mainDbContext;
     private readonly List<Dish> inMemoryDishes;
     private readonly ReaderWriterLockSlim dishesCacheLock;
 
     public DishesCacheService(IServiceScopeFactory serviceScopeFactory)
     {
-        mainDbContext = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<MainDbContext>();
-        inMemoryDishes = [.. mainDbContext.Dishes.OrderBy(dish => dish.DishId)];
+        using var scope = serviceScopeFactory.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MainDbContext>();
+        inMemoryDishes = [.. dbContext.Dishes.OrderBy(dish => dish.DishId)];
         dishesCacheLock = new ReaderWriterLockSlim();
     }
 

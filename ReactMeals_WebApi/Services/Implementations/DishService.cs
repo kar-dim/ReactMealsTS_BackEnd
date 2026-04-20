@@ -32,8 +32,8 @@ namespace ReactMeals_WebApi.Services.Implementations
             var dish = AddDishDTOMapping.AddDishDTOtoDish(dto);
             dish.Dish_url = fileName;
 
-            cache.AddCacheEntry(dish);
             await dishRepo.AddAsync(dish);
+            cache.AddCacheEntry(dish);
             imageService.SaveImage(fileName, imageBytes);
 
             return Result.Success(dish);
@@ -54,8 +54,8 @@ namespace ReactMeals_WebApi.Services.Implementations
             var newDish = AddDishDTOMapping.AddDishDTOWithIdtoDish(dto);
             newDish.Dish_url = fileName;
 
-            cache.UpdateCacheEntry(newDish);
             await dishRepo.UpdateAsync(newDish);
+            cache.UpdateCacheEntry(newDish);
             imageService.ReplaceImage(existingDish.Dish_url, fileName, imageBytes);
 
             return Result.Success();
@@ -68,8 +68,8 @@ namespace ReactMeals_WebApi.Services.Implementations
             if (dish == null)
                 return Result.Failure($"Could not delete dish with ID {id}, it does not exist");
 
-            cache.DeleteCacheEntry(id);
             await dishRepo.RemoveAsync(dish);
+            cache.DeleteCacheEntry(id);
             imageService.DeleteImage(dish.Dish_url);
 
             return Result.Success();

@@ -4,8 +4,6 @@ namespace ReactMeals_WebApi.Services.Implementations;
 
 public class JwtRenewalService(IServiceScopeFactory serviceScopeFactory, ILogger<JwtRenewalService> logger) : IJwtRenewalService
 {
-    private readonly IJwtService jwtService = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IJwtService>();
-    //cached token value loaded from the database to avoid repeated DB queries
     public string ManagementApiToken { get; set; } = string.Empty;
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -21,6 +19,10 @@ public class JwtRenewalService(IServiceScopeFactory serviceScopeFactory, ILogger
         logger.LogInformation("Renew token main loop started");
         while (!cancellationToken.IsCancellationRequested)
         {
+            // JwtService, TokenRepository, and DbContext are all createφ after each loop
+            using var scope = serviceScopeFactory.CreateScope();
+            var jwtService = scope.ServiceProvider.GetRequiredService<IJwtService>();
+
             logger.LogInformation("Retrieving local token...");
             var token = await jwtService.RetrieveToken();
             // If no token is found, or it is expired, we must renew it
@@ -41,7 +43,6 @@ public class JwtRenewalService(IServiceScopeFactory serviceScopeFactory, ILogger
                 ManagementApiToken = newAccessToken.TokenValue;
                 logger.LogInformation("Successfully renewed token");
                 await Task.Delay(sleepTime, cancellationToken);
-                
             }
             // The token is still valid, sleep until renew time
             else
@@ -49,7 +50,7 @@ public class JwtRenewalService(IServiceScopeFactory serviceScopeFactory, ILogger
                 logger.LogInformation("Successfully retrieved local token. It will expire at: " + token.ExpiryDate.ToString("dd/MM/yyyy HH:mm"));
                 ManagementApiToken = token.TokenValue;
                 TimeSpan sleepTime = token.ExpiryDate.Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
-                if (sleepTime.Seconds > 0)
+                if (sleepTime > TimeSpan.Zero)
                     await Task.Delay(sleepTime, cancellationToken);
             }
         }

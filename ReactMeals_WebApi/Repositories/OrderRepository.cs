@@ -12,11 +12,6 @@ public class OrderRepository(MainDbContext context)
         context.Orders.Add(order);
         await context.SaveChangesAsync();
     }
-    public IQueryable<WebOrder> GetOrders()
-    {
-        return context.Orders;
-    }
-
     public async Task<List<AllUserOrdersDTO>> GetUserOrdersAsync(string userId)
     {
         return await (from orderItem in context.OrderItems

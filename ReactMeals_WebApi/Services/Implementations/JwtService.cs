@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using ReactMeals_WebApi.Common;
+﻿using ReactMeals_WebApi.Common;
 using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
 using ReactMeals_WebApi.Repositories;
@@ -9,9 +8,8 @@ using System.Net;
 
 namespace ReactMeals_WebApi.Services.Implementations;
 
-public class JwtService(IServiceScopeFactory serviceScopeFactory, ILogger<JwtService> logger, IConfiguration configuration, RestClient client) : IJwtService
+public class JwtService(TokenRepository tokenRepository, ILogger<JwtService> logger, IConfiguration configuration, RestClient client) : IJwtService
 {
-    private readonly TokenRepository tokenRepository = serviceScopeFactory.CreateScope().ServiceProvider.GetRequiredService<TokenRepository>();
     private readonly ManagementInputDTO requestBody = new ManagementInputDTO(
         ClientId: configuration["Auth0:M2M_ClientID"],
         ClientSecret: File.ReadAllText("m2m_secret.txt").Trim(),
@@ -44,12 +42,8 @@ public class JwtService(IServiceScopeFactory serviceScopeFactory, ILogger<JwtSer
             return null; //let's consider it "expired" if no "exp" claim is found (it should never happen)
         }
 
-        //delete old token from db
-        await tokenRepository.RemoveManagementApiTokenAsync();
-
-        //put to db
         DateTime tokenExpireDateTime = DateTime.Now.AddSeconds(tokenData.ExpiresIn);
-        await tokenRepository.AddManagementApiTokenAsync(tokenData.AccessToken, tokenExpireDateTime);
+        await tokenRepository.ReplaceManagementApiTokenAsync(tokenData.AccessToken, tokenExpireDateTime);
         logger.LogInformation("Auth0 Management API Token successfully saved");
 
         return new Token(tokenData.AccessToken, TokenType.MANAGEMENT_API, tokenExpireDateTime);

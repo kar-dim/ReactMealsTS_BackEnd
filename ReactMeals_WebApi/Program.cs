@@ -64,7 +64,7 @@ builder.Services.AddHostedService(provider => provider.GetService<IJwtRenewalSer
 builder.Services.AddSingleton<IDishesCacheService, DishesCacheService>();
 builder.Services.AddHostedService(provider => provider.GetService<IDishesCacheService>());
 //RestSharp singleton client
-builder.Services.AddSingleton(provider => new RestClient("https://" + m2mDomain));
+builder.Services.AddSingleton(provider => new RestClient(new RestClientOptions("https://" + m2mDomain) { Timeout = TimeSpan.FromSeconds(10) }));
 
 var app = builder.Build();
 app.UseCors(corsPolicyName);

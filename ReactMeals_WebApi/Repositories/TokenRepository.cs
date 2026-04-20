@@ -15,13 +15,25 @@ public class TokenRepository(MainDbContext context)
 
     public async Task<Token> GetManagementApiTokenAsync()
     {
-        return await context.Tokens.Where(token => token.TokenType.Equals(TokenType.MANAGEMENT_API)).FirstOrDefaultAsync();
+        return await context.Tokens.AsNoTracking().Where(token => token.TokenType.Equals(TokenType.MANAGEMENT_API)).FirstOrDefaultAsync();
     }
 
-    public async Task RemoveManagementApiTokenAsync()
+    public async Task ReplaceManagementApiTokenAsync(string tokenValue, DateTime expiryDate)
     {
-        Token token = await GetManagementApiTokenAsync();
-        if (token != null)
-            context.Tokens.Remove(token);
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        try
+        {
+            var existing = await context.Tokens.Where(t => t.TokenType.Equals(TokenType.MANAGEMENT_API)).FirstOrDefaultAsync();
+            if (existing != null)
+                context.Tokens.Remove(existing);
+            context.Tokens.Add(new Token(tokenValue, TokenType.MANAGEMENT_API, expiryDate));
+            await context.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }

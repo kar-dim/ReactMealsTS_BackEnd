@@ -8,7 +8,7 @@ public class UserRepository(MainDbContext context)
 {
     public async Task<bool> UserExists(User user)
     {
-        return await context.Users.FirstOrDefaultAsync(localUser => localUser.User_Id == user.User_Id) != null;
+        return await context.Users.AsNoTracking().AnyAsync(localUser => localUser.User_Id == user.User_Id);
     }
     public async Task AddAsync(User user)
     {
