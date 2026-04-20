@@ -13,7 +13,7 @@ namespace ReactMeals_WebApi.Services.Implementations
             string extension = imageService.ValidateImage(imageBytes);
             if (extension == null)
                 return null;
-            return dishName.Trim().Replace(' ', '_').ToLower() + "." + extension;
+            return Path.GetFileName(dishName.Trim().Replace(' ', '_').ToLower()) + "." + extension;
         }
 
         //Create the dish, write to db

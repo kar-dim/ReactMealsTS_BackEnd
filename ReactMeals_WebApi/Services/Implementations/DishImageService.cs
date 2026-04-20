@@ -5,24 +5,23 @@ namespace ReactMeals_WebApi.Services.Implementations
     public class DishImageService(ILogger<DishImageService> logger) : IDishImageService
     {
         private static readonly string ImagePath = "Images";
-        private static readonly Dictionary<byte[], string> knownMagicBytes = new()
-        {
-            { new byte[] { 0xFF, 0xD8, 0xFF }, "jpg" },
-            { new byte[] { 0x89, 0x50, 0x4E, 0x47 }, "png" },
-            { new byte[] { 0x47, 0x49, 0x46, 0x38 }, "gif" },
-            { new byte[] { 0x42, 0x4D}, "bmp" }
-        };
+        private static readonly (byte[] Magic, string Extension)[] knownMagicBytes =
+        [
+            (new byte[] { 0xFF, 0xD8, 0xFF }, "jpg"),
+            (new byte[] { 0x89, 0x50, 0x4E, 0x47 }, "png"),
+            (new byte[] { 0x47, 0x49, 0x46, 0x38 }, "gif"),
+            (new byte[] { 0x42, 0x4D }, "bmp")
+        ];
 
-        //Very basic image validation by using magic bytes
         public string ValidateImage(byte[] imageData)
         {
-            if (imageData.Length < 32) //too small
+            if (imageData.Length < 32)
                 return null;
             ReadOnlySpan<byte> imageSpan = imageData;
-            foreach (var magicByte in knownMagicBytes)
+            foreach (var (magic, extension) in knownMagicBytes)
             {
-                if (imageSpan.Length >= magicByte.Key.Length && imageSpan[..magicByte.Key.Length].SequenceEqual(magicByte.Key))
-                    return magicByte.Value;
+                if (imageSpan.Length >= magic.Length && imageSpan[..magic.Length].SequenceEqual(magic))
+                    return extension;
             }
             return null;
         }

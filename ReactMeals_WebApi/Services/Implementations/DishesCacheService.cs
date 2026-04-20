@@ -1,79 +1,58 @@
-﻿using ReactMeals_WebApi.Contexts;
+using ReactMeals_WebApi.Contexts;
 using ReactMeals_WebApi.Models;
 using ReactMeals_WebApi.Services.Interfaces;
 
 namespace ReactMeals_WebApi.Services.Implementations;
 
-//Service that loads all dishes from db at startup
+//Service that caches dishes from db with a copy-on-write mechanism
 //Each web request that needs to read/write dishes, will access this dish cache instead of going to the db directly
 //useful for bulk Get requests. After writing into the cache, controllers should immediately persist data into db
 public class DishesCacheService : IDishesCacheService
 {
-    private readonly List<Dish> inMemoryDishes;
-    private readonly ReaderWriterLockSlim dishesCacheLock;
+    private volatile List<Dish> _dishes;
+    private readonly object _writeLock = new();
 
     public DishesCacheService(IServiceScopeFactory serviceScopeFactory)
     {
         using var scope = serviceScopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MainDbContext>();
-        inMemoryDishes = [.. dbContext.Dishes.OrderBy(dish => dish.DishId)];
-        dishesCacheLock = new ReaderWriterLockSlim();
+        _dishes = [.. dbContext.Dishes.OrderBy(dish => dish.DishId)];
     }
 
     public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    public async Task StopAsync(CancellationToken cancellationToken) => await Task.CompletedTask;
+    public Dish GetDishById(int dishId) => _dishes.Find(dish => dish.DishId == dishId);
 
-    private T WithDishReadLock<T>(Func<T> func)
+    public Dish GetDishByName(string dishNameToCheck) =>
+        _dishes.FirstOrDefault(x => string.Equals(x.Dish_name, dishNameToCheck, StringComparison.OrdinalIgnoreCase));
+
+    public List<Dish> GetDishes() => _dishes;
+
+    public decimal? GetDishCost(int dishId) => _dishes.Find(dish => dish.DishId == dishId)?.Price;
+
+    public void AddCacheEntry(Dish dish)
     {
-        dishesCacheLock.EnterReadLock();
-        try
-        {
-            return func();
-        }
-        finally
-        {
-            dishesCacheLock.ExitReadLock();
-        }
+        lock (_writeLock)
+            _dishes = [.. _dishes, dish];
     }
 
-    private void WithDishWriteLock(Action action)
+    public void DeleteCacheEntry(int dishId)
     {
-        dishesCacheLock.EnterWriteLock();
-        try
-        {
-            action();
-        }
-        finally
-        {
-            dishesCacheLock.ExitWriteLock();
-        }
+        lock (_writeLock)
+            _dishes = _dishes.Where(d => d.DishId != dishId).ToList();
     }
 
-    public Dish GetDishById(int dishId) => WithDishReadLock(() => inMemoryDishes.Find(dish => dish.DishId == dishId));
-
-    public Dish GetDishByName(string dishNameToCheck) => WithDishReadLock(() => 
-        inMemoryDishes.FirstOrDefault(x => string.Equals(x.Dish_name, dishNameToCheck, StringComparison.OrdinalIgnoreCase)));
-
-    public List<Dish> GetDishes() => WithDishReadLock(() => inMemoryDishes);
-
-    public decimal? GetDishCost(int dishId) => WithDishReadLock(() => inMemoryDishes.Find(dish => dish.DishId == dishId)?.Price);
-
-    public void AddCacheEntry(Dish dish) => WithDishWriteLock(() => inMemoryDishes.Add(dish));
-
-    public void DeleteCacheEntry(int dishId) => WithDishWriteLock(() =>
+    public void UpdateCacheEntry(Dish dish)
     {
-        Dish dishToRemove = inMemoryDishes.FirstOrDefault(dish => dish.DishId == dishId);
-        if (dishToRemove != null)
-            inMemoryDishes.Remove(dishToRemove);
-    });
-
-    public void UpdateCacheEntry(Dish dish) => WithDishWriteLock(() =>
-    {
-        int dishIndex = inMemoryDishes.FindIndex(d => d.DishId == dish.DishId);
-        if (dishIndex != -1)
-            inMemoryDishes[dishIndex] = dish;
-    });
+        lock (_writeLock)
+        {
+            var updated = _dishes.ToList();
+            int idx = updated.FindIndex(d => d.DishId == dish.DishId);
+            if (idx != -1) updated[idx] = dish;
+            _dishes = updated;
+        }
+    }
 
     public void Dispose() => GC.SuppressFinalize(this);
 }
