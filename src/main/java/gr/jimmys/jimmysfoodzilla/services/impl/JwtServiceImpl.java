@@ -1,28 +1,40 @@
 package gr.jimmys.jimmysfoodzilla.services.impl;
 
+import tools.jackson.databind.ObjectMapper;
 import gr.jimmys.jimmysfoodzilla.dto.ManagementInputDTO;
 import gr.jimmys.jimmysfoodzilla.dto.ManagementResponseDTO;
 import gr.jimmys.jimmysfoodzilla.models.Token;
 import gr.jimmys.jimmysfoodzilla.repository.TokenRepository;
 import gr.jimmys.jimmysfoodzilla.services.api.JwtService;
 import jakarta.annotation.PostConstruct;
-import kong.unirest.core.HttpResponse;
-import kong.unirest.core.Unirest;
-import kong.unirest.core.UnirestException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 @Service
 public class JwtServiceImpl implements JwtService {
     private final Logger logger = LoggerFactory.getLogger(JwtServiceImpl.class);
 
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
+
     @Autowired
     private TokenRepository tokenRepository;
+
+    @Autowired
+    private HttpClient httpClient;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Value("${auth0.domain}")
     private String domain;
@@ -42,42 +54,41 @@ public class JwtServiceImpl implements JwtService {
 
     @Override
     public Token retrieveToken() {
-        var tokenFromDb = tokenRepository.getManagementApiToken();
-        return tokenFromDb.orElseGet(() -> {
+        return tokenRepository.getManagementApiToken().orElseGet(() -> {
             logger.info("No ManagementAPI Token found in db...");
             return null;
         });
     }
 
     @Override
-    public Token renewToken() {
+    public Token renewToken() throws InterruptedException {
         try {
-            HttpResponse<ManagementResponseDTO> response = Unirest.post("https://" + domain + "/oauth/token")
-                    .header("content-type", "application/json")
-                    .body(requestBody)
-                    .asObject(ManagementResponseDTO.class);
-            if (response.getStatus() != 200) {
-                logger.error("Error in ManagementAPI oauth/token HTTP POST request, could not receive token\nReason: STATUS CODE: {} STATUS TEXT: {}", response.getStatus(), response.getStatusText());
+            String body = objectMapper.writeValueAsString(requestBody);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://" + domain + "/oauth/token"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .timeout(REQUEST_TIMEOUT)
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) {
+                logger.error("ManagementAPI oauth/token POST failed: status {}", response.statusCode());
                 return null;
             }
-            // Extract data
-            var tokenData = response.getBody();
+            var tokenData = objectMapper.readValue(response.body(), ManagementResponseDTO.class);
             if (tokenData.getExpiresIn() == 0 || tokenData.getAccessToken() == null || tokenData.getTokenType() == null) {
                 logger.error("ManagementAPI token is malformed! Check Auth0 configuration");
                 return null;
             }
-
-            //delete old token from db
             tokenRepository.removeManagementApiToken();
-            //create the new Token entity
-            Token newToken = new Token(0, tokenData.getAccessToken(), Token.MANAGEMENT_API, LocalDateTime.now().plusSeconds(tokenData.getExpiresIn()));
-            //save to db
+            Token newToken = new Token(0, tokenData.getAccessToken(), Token.MANAGEMENT_API,
+                    LocalDateTime.now().plusSeconds(tokenData.getExpiresIn()));
             tokenRepository.save(newToken);
             logger.info("Auth0 Management API Token successfully saved");
             return newToken;
-
-        } catch (UnirestException e) {
-            logger.error("Error in ManagementAPI oauth/token HTTP POST request, could not receive token");
+        } catch (IOException e) {
+            logger.error("ManagementAPI oauth/token POST failed: {}", e.getMessage());
             return null;
         }
     }

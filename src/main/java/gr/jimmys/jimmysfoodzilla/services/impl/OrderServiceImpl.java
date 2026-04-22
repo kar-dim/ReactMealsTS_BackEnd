@@ -62,7 +62,7 @@ public class OrderServiceImpl implements OrderService {
         var totalCost = orderDishes.stream()
                 .map(dish -> dish.getPrice().multiply(valueOf(counterById.getOrDefault(dish.getId(), 0))))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        orderRepository.save(WebOrderDTOToEntity.orderDTOToEntity(dto, orderDishes, totalCost, user.get()));
+        orderRepository.save(WebOrderDTOToEntity.orderDTOToEntity(orderDishes, counterById, totalCost, user.get()));
         return Result.success();
     }
 

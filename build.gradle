@@ -1,7 +1,10 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.4.5'
-    id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.springframework.boot' version '4.0.5'
+    // io.spring.dependency-management is no longer needed in Spring Boot 4.x
+    // BOM is applied via platform() in dependencies instead
 }
 
 repositories {
@@ -9,19 +12,20 @@ repositories {
 }
 
 dependencies {
-    //other
-    implementation 'com.microsoft.sqlserver:mssql-jdbc:12.10.0.jre11'
-    implementation 'com.konghq:unirest-java-core:4.4.6'
-    implementation 'com.konghq:unirest-objectmapper-jackson:4.2.9'
-    implementation 'com.nimbusds:nimbus-jose-jwt:10.2'
+    // Spring Boot BOM — version-manages all spring-boot-starter-* and their transitive deps
+    implementation platform(SpringBootPlugin.BOM_COORDINATES)
+
+    //other — explicit versions for deps not in the Spring Boot BOM
+    implementation 'com.microsoft.sqlserver:mssql-jdbc:13.4.0.jre11'
     implementation 'org.projectlombok:lombok:1.18.38'
     annotationProcessor 'org.projectlombok:lombok:1.18.38'
 
-    //spring
+    //spring — no versions needed, all managed by the BOM above
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
 
     //test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -53,6 +57,8 @@ java {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    // Required for @PreAuthorize SpEL parameter name resolution in Spring Framework 7+
+    options.compilerArgs << '-parameters'
 }
 
 tasks.withType(Javadoc).configureEach {

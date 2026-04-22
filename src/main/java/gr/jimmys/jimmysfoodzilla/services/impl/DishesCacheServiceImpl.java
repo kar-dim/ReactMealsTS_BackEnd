@@ -1,6 +1,5 @@
 package gr.jimmys.jimmysfoodzilla.services.impl;
 
-import gr.jimmys.jimmysfoodzilla.dto.AddDishDTO;
 import gr.jimmys.jimmysfoodzilla.models.Dish;
 import gr.jimmys.jimmysfoodzilla.repository.DishRepository;
 import gr.jimmys.jimmysfoodzilla.services.api.DishesCacheService;
@@ -11,94 +10,67 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Supplier;
 
+/**
+ * Copy-on-write cache: reads are lock-free (volatile field read),
+ * writes are synchronized and replace the whole reference with a (new) unmodifiable list.
+ */
 @Service
 public class DishesCacheServiceImpl implements DishesCacheService {
-    private final ArrayList<Dish> inMemoryDishes;
 
-    private final Lock dishWriteLock;
-
-    private final Lock dishReadLock;
+    private volatile List<Dish> inMemoryDishes;
 
     public DishesCacheServiceImpl(DishRepository dishRepository) {
-        var dishCacheLock = new ReentrantReadWriteLock();
-        dishWriteLock = dishCacheLock.writeLock();
-        dishReadLock = dishCacheLock.readLock();
-        inMemoryDishes = new ArrayList<>(dishRepository.findAllAscendingById());
-    }
-
-    private <T> T withDishReadLock(Supplier<T> supplier) {
-        dishReadLock.lock();
-        try {
-            return supplier.get();
-        }
-        finally {
-            dishReadLock.unlock();
-        }
-    }
-
-    private void withDishWriteLock(Runnable action) {
-        dishWriteLock.lock();
-        try {
-            action.run();
-        }
-        finally {
-            dishWriteLock.unlock();
-        }
+        inMemoryDishes = List.copyOf(dishRepository.findAllAscendingById());
     }
 
     @Override
     public Dish getDish(int dishId) {
-        return withDishReadLock(() ->
-                inMemoryDishes.stream()
-                        .filter(dish -> dish.getId() == dishId)
-                        .findFirst()
-                        .orElse(null));
+        return inMemoryDishes.stream()
+                .filter(dish -> dish.getId() == dishId)
+                .findFirst()
+                .orElse(null);
     }
 
     @Override
     public List<Dish> getDishes() {
-        return withDishReadLock(() -> inMemoryDishes);
+        return inMemoryDishes;
     }
 
     @Override
     public List<Dish> getDishes(List<Integer> dishIds, EntityManager em) {
-        return withDishReadLock(() -> {
-            Set<Integer> idSet = new HashSet<>(dishIds);
-            return inMemoryDishes.stream()
-                    .filter(dish -> idSet.contains(dish.getId()))
-                    .map(dish -> em.getReference(Dish.class, dish.getId()))
-                    .toList();
-        });
+        List<Dish> snapshot = inMemoryDishes;
+        Set<Integer> idSet = new HashSet<>(dishIds);
+        return snapshot.stream()
+                .filter(dish -> idSet.contains(dish.getId()))
+                .map(dish -> em.getReference(Dish.class, dish.getId()))
+                .toList();
     }
 
     @Override
-    public void addCacheEntry(Dish dish) {
-        withDishWriteLock(() -> inMemoryDishes.add(dish));
+    public synchronized void addCacheEntry(Dish dish) {
+        var newList = new ArrayList<>(inMemoryDishes);
+        newList.add(dish);
+        inMemoryDishes = List.copyOf(newList);
     }
 
     @Override
-    public void deleteCacheEntry(int dishId) {
-        withDishWriteLock(() -> inMemoryDishes.removeIf(d -> d.getId() == dishId));
+    public synchronized void deleteCacheEntry(int dishId) {
+        inMemoryDishes = inMemoryDishes.stream()
+                .filter(d -> d.getId() != dishId)
+                .toList();
     }
 
     @Override
-    public void updateCacheEntry(Dish dish) {
-        withDishWriteLock(() -> {
-            for (int i = 0; i < inMemoryDishes.size(); i++) {
-                if (inMemoryDishes.get(i).getId() == dish.getId()) {
-                    inMemoryDishes.set(i, dish);
-                    break;
-                }
-            }
-        });
+    public synchronized void updateCacheEntry(Dish dish) {
+        inMemoryDishes = inMemoryDishes.stream()
+                .map(d -> d.getId() == dish.getId() ? dish : d)
+                .toList();
     }
 
     @Override
     public boolean existDishByName(String dishNameToCheck) {
-        return withDishReadLock(() -> inMemoryDishes.stream().anyMatch(d -> d.getName().equalsIgnoreCase(dishNameToCheck)));
+        return inMemoryDishes.stream()
+                .anyMatch(d -> d.getName().equalsIgnoreCase(dishNameToCheck));
     }
 }

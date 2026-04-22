@@ -38,12 +38,20 @@ public class DishImageServiceImpl implements DishImageService {
         return null;
     }
 
+    private Path safeResolve(String fileName) {
+        // Prevent path traversal: resolve then verify the result is still inside IMAGE_FOLDER
+        Path resolved = IMAGE_FOLDER.toAbsolutePath().normalize()
+                .resolve(Paths.get(fileName).getFileName()); // getFileName() strips any directory components
+        if (!resolved.startsWith(IMAGE_FOLDER.toAbsolutePath().normalize()))
+            throw new SecurityException("Path traversal attempt detected: " + fileName);
+        return resolved;
+    }
+
     @Override
     public void deleteImage(String fileName) {
         try {
-            Files.deleteIfExists(IMAGE_FOLDER.resolve(fileName));
+            Files.deleteIfExists(safeResolve(fileName));
         } catch (IOException ioe) {
-            //it's OK, image file is not critical error
             logger.error("Could not remove file with name: {}", fileName);
         }
     }
@@ -51,9 +59,8 @@ public class DishImageServiceImpl implements DishImageService {
     @Override
     public void saveImage(String fileName, byte[] data) {
         try {
-            Files.write(IMAGE_FOLDER.resolve(fileName), data);
+            Files.write(safeResolve(fileName), data);
         } catch (IOException e) {
-            //it's OK, image file is not critical error
             logger.error("Could not create static image file with file name: {}", fileName);
         }
     }

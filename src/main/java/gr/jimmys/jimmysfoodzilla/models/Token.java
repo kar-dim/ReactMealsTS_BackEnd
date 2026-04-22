@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "Tokens")
 public class Token {
-    public static String MANAGEMENT_API = "M_API";
+    public static final String MANAGEMENT_API = "M_API";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

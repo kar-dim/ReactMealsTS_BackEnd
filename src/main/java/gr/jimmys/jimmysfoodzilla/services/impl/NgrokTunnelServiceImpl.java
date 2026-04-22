@@ -1,10 +1,11 @@
 package gr.jimmys.jimmysfoodzilla.services.impl;
 
 import gr.jimmys.jimmysfoodzilla.services.api.TunnelService;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -22,31 +23,38 @@ public class NgrokTunnelServiceImpl implements TunnelService {
     @Value("${isdevelopment}")
     private boolean isDev;
 
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     @Override
     public void startTunnel() {
-        //don't run ngrok in production
         if (!isDev)
             return;
         Thread ngrokThread = new Thread(() -> {
             try {
-                logger.info("START service");
-                var ngrokKill = new ProcessBuilder(List.of("taskkill", "/f", "/im", "ngrok.exe"));
-                var ngrokStart = new ProcessBuilder(List.of("ngrok", "http", "--domain=" + ngrokUrl, String.valueOf(port)));
-                //kill (if exists)
-                Process p = ngrokKill.start();
-                int code = p.waitFor();
-                int value = p.exitValue();
-                if (code == 0 && value == 0) {
-                    logger.info("TASKKILL successfully terminated ngrok instances");
-                } //else don't care, no ngrok instances were killed
-                //start
-                ngrokStart.start();
-                logger.info("STARTED successfully");
+                logger.info("Killing any existing ngrok instances...");
+                Process kill = new ProcessBuilder(List.of("taskkill", "/f", "/im", "ngrok.exe"))
+                        .start();
+                int killCode = kill.waitFor();
+                if (killCode == 0)
+                    logger.info("Existing ngrok instance terminated");
+                else
+                    logger.info("No existing ngrok instance found (taskkill exit: {})", killCode);
+
+                logger.info("Starting ngrok tunnel on port {}...", port);
+                Process ngrok = new ProcessBuilder(
+                        List.of("ngrok", "http", "--domain=" + ngrokUrl, String.valueOf(port)))
+                        .inheritIO()
+                        .start();
+                int exitCode = ngrok.waitFor();
+                logger.warn("ngrok process exited with code {}", exitCode);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.warn("ngrok thread interrupted");
             } catch (Exception e) {
-                logger.error("ERROR: {}", e.getMessage());
+                logger.error("Failed to start ngrok: {}", e.getMessage());
             }
         });
+        ngrokThread.setDaemon(true);
+        ngrokThread.setName("ngrok-tunnel");
         ngrokThread.start();
     }
 }

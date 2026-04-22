@@ -1,24 +1,34 @@
 package gr.jimmys.jimmysfoodzilla.controllers;
 
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import gr.jimmys.jimmysfoodzilla.dto.Auth0UserDeserialize;
 import gr.jimmys.jimmysfoodzilla.dto.Auth0UserSerialize;
 import gr.jimmys.jimmysfoodzilla.dto.UserMetadata;
 import gr.jimmys.jimmysfoodzilla.models.User;
 import gr.jimmys.jimmysfoodzilla.repository.UserRepository;
 import gr.jimmys.jimmysfoodzilla.services.api.JwtRenewalService;
-import kong.unirest.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
+import java.net.URI;
 import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 
@@ -27,17 +37,26 @@ import java.util.Objects;
 public class UserController {
     private final Logger logger = LoggerFactory.getLogger(UserController.class);
 
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
+
     @Autowired
     UserRepository userRepository;
 
     @Autowired
     private JwtRenewalService jwtRenewalService;
 
+    @Autowired
+    @Qualifier("m2mJwtDecoder")
+    private JwtDecoder m2mJwtDecoder;
+
+    @Autowired
+    private HttpClient httpClient;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @Value("${auth0.domain}")
     private String auth0_domain;
-
-    @Value("${auth0.m2maudience}")
-    private String audience;
 
     @GetMapping("/GetUsers")
     public ResponseEntity<List<User>> getUsers() {
@@ -45,42 +64,50 @@ public class UserController {
         if (mApiToken.isEmpty())
             return ResponseEntity.internalServerError().build();
         try {
-            HttpResponse<List<Auth0UserDeserialize>> response = Unirest.get("https://" + auth0_domain + "/api/v2/users")
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://" + auth0_domain + "/api/v2/users"))
                     .header("Authorization", "Bearer " + mApiToken)
-                    .asObject(new GenericType<>() {
-                    });
-            if (response.getStatus() != 200 || response.getBody() == null) {
-                logger.error("Error in ManagementAPI api/v2/users HTTP GET request, could not get users\nReason: STATUS CODE: {} STATUS TEXT: {}", response.getStatus(), response.getStatusText());
+                    .GET()
+                    .timeout(REQUEST_TIMEOUT)
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) {
+                logger.error("ManagementAPI GET /api/v2/users failed: status {}", response.statusCode());
                 return ResponseEntity.internalServerError().build();
             }
-            // Parse the JSON response
-            var users = response.getBody();
+            List<Auth0UserDeserialize> users = objectMapper.readValue(response.body(), new TypeReference<>() {});
             if (users.isEmpty()) {
                 logger.error("Users returned are malformed! Check Auth0 configuration");
                 return ResponseEntity.internalServerError().build();
             }
-            //filter and return valid users
             var usersToReturn = users.stream()
                     .filter(Objects::nonNull)
                     .filter(Auth0UserDeserialize::isValidUser)
-                    .map(user -> new User(user.getUserId(), user.getEmail(), user.getUserMetadata().getName(), user.getUserMetadata().getLastName(), user.getUserMetadata().getAddress()))
+                    .map(user -> new User(user.getUserId(), user.getEmail(),
+                            user.getUserMetadata().getName(),
+                            user.getUserMetadata().getLastName(),
+                            user.getUserMetadata().getAddress()))
                     .toList();
             return new ResponseEntity<>(usersToReturn, HttpStatus.OK);
-        } catch (UnirestException e) {
-            logger.error("Error in ManagementAPI api/v2/users HTTP GET request");
+        } catch (IOException e) {
+            logger.error("ManagementAPI GET /api/v2/users failed: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             return ResponseEntity.internalServerError().build();
         }
     }
 
     @PostMapping("/CreateUser")
-    public ResponseEntity<User> createUser(@RequestHeader(HttpHeaders.AUTHORIZATION) String token, @RequestBody User userToCreate) {
-        if (token == null || !token.startsWith("Bearer ")) {
+    public ResponseEntity<User> createUser(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader, @RequestBody User userToCreate) {
+        if (authHeader == null || !authHeader.startsWith("Bearer "))
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        try {
+            m2mJwtDecoder.decode(authHeader.substring(7));
+        } catch (JwtException e) {
+            logger.warn("CreateUser: M2M token validation failed - {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        var tokenValidationStatus = jwtRenewalService.validateToken(token, audience);
-        if (tokenValidationStatus != HttpStatus.OK)
-            return ResponseEntity.status(tokenValidationStatus).build();
-        //JWT checks passed, insert the user to DB if not already exists
         if (userRepository.existsById(userToCreate.getUserId())) {
             logger.error("Error: User already exists");
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "User Already Exists!");
@@ -96,22 +123,30 @@ public class UserController {
         if (mApiToken.isEmpty())
             return ResponseEntity.internalServerError().build();
         try {
-            var userToSend = new Auth0UserSerialize(newUser.getEmail(), new UserMetadata(newUser.getName(), newUser.getLastName(), newUser.getAddress()));
-            HttpResponse<Empty> response = Unirest.patch("https://" + auth0_domain + "/api/v2/users/" + URLEncoder.encode(newUser.getUserId(), StandardCharsets.UTF_8))
+            var userToSend = new Auth0UserSerialize(newUser.getEmail(),
+                    new UserMetadata(newUser.getName(), newUser.getLastName(), newUser.getAddress()));
+            String body = objectMapper.writeValueAsString(userToSend);
+            String encodedId = URLEncoder.encode(newUser.getUserId(), StandardCharsets.UTF_8);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://" + auth0_domain + "/api/v2/users/" + encodedId))
                     .header("Authorization", "Bearer " + mApiToken)
-                    .header("Content-type", "application/json")
+                    .header("Content-Type", "application/json")
                     .header("Accept", "application/json")
-                    .body(userToSend)
-                    .asEmpty();
-            if (response.getStatus() != 200) {
-                logger.error("Error in ManagementAPI api/v2/users/{} HTTP PATCH request, could not patch user\nReason: STATUS CODE: {} STATUS TEXT: {}", newUser.getUserId(), response.getStatus(), response.getStatusText());
+                    .method("PATCH", HttpRequest.BodyPublishers.ofString(body))
+                    .timeout(REQUEST_TIMEOUT)
+                    .build();
+            HttpResponse<Void> response = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
+            if (response.statusCode() != 200) {
+                logger.error("ManagementAPI PATCH /api/v2/users/{} failed: status {}", newUser.getUserId(), response.statusCode());
                 return ResponseEntity.internalServerError().build();
             }
-            //update user in db
             userRepository.save(newUser);
             return new ResponseEntity<>(HttpStatus.OK);
-        } catch (UnirestException e) {
-            logger.error("Error in ManagementAPI api/v2/users HTTP PATCH request");
+        } catch (IOException e) {
+            logger.error("ManagementAPI PATCH /api/v2/users failed: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -122,18 +157,24 @@ public class UserController {
         if (mApiToken.isEmpty())
             return ResponseEntity.internalServerError().build();
         try {
-            HttpResponse<Empty> response = Unirest.delete("https://" + auth0_domain + "/api/v2/users/" + URLEncoder.encode(userId, StandardCharsets.UTF_8))
+            String encodedId = URLEncoder.encode(userId, StandardCharsets.UTF_8);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://" + auth0_domain + "/api/v2/users/" + encodedId))
                     .header("Authorization", "Bearer " + mApiToken)
-                    .asEmpty();
-            //DELETE ok status is 204
-            if (response.getStatus() != 204) {
-                logger.error("Error in ManagementAPI api/v2/users/{} HTTP DELETE request, could not delete user\nReason: STATUS CODE: {} STATUS TEXT: {}", userId, response.getStatus(), response.getStatusText());
+                    .DELETE()
+                    .timeout(REQUEST_TIMEOUT)
+                    .build();
+            HttpResponse<Void> response = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
+            if (response.statusCode() != 204) {
+                logger.error("ManagementAPI DELETE /api/v2/users/{} failed: status {}", userId, response.statusCode());
                 return ResponseEntity.internalServerError().build();
             }
-            //delete user from db? for now not.
             return new ResponseEntity<>(HttpStatus.OK);
-        } catch (UnirestException e) {
-            logger.error("Error in ManagementAPI api/v2/users HTTP DELETE request");
+        } catch (IOException e) {
+            logger.error("ManagementAPI DELETE /api/v2/users failed: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             return ResponseEntity.internalServerError().build();
         }
     }

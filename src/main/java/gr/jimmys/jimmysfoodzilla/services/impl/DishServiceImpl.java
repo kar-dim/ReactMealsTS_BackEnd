@@ -9,8 +9,6 @@ import gr.jimmys.jimmysfoodzilla.services.api.DishImageService;
 import gr.jimmys.jimmysfoodzilla.services.api.DishService;
 import gr.jimmys.jimmysfoodzilla.services.api.DishesCacheService;
 import gr.jimmys.jimmysfoodzilla.utils.Holder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +19,6 @@ import static gr.jimmys.jimmysfoodzilla.common.ErrorMessages.*;
 
 @Service
 public class DishServiceImpl implements DishService {
-    private final Logger logger = LoggerFactory.getLogger(DishServiceImpl.class);
 
     private static final BigDecimal maxPrice = BigDecimal.valueOf(256);
     @Autowired
@@ -33,13 +30,21 @@ public class DishServiceImpl implements DishService {
     @Autowired
     DishImageService imageService;
 
+    private static final int MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
+
     @Override
     public String generateDishFilename(String dishName, String dishB64, Holder<byte[]> imageBytes) {
         imageBytes.setValue(Base64.getDecoder().decode(dishB64));
+        if (imageBytes.getValue().length > MAX_IMAGE_BYTES)
+            return null;
         var extension = imageService.validateImage(imageBytes.getValue());
         if (extension == null)
             return null;
-        return dishName.trim().replace(' ', '_').toLowerCase() + "." + extension;
+        // prevent path traversal
+        String safeName = dishName.trim().toLowerCase().replaceAll("[^a-z0-9_\\-]", "_");
+        if (safeName.isEmpty() || safeName.equals("_"))
+            return null;
+        return safeName + "." + extension;
     }
 
     @Override

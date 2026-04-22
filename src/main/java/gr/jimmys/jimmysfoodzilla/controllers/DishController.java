@@ -7,15 +7,15 @@ import gr.jimmys.jimmysfoodzilla.dto.WebOrderDTO;
 import gr.jimmys.jimmysfoodzilla.models.Dish;
 import gr.jimmys.jimmysfoodzilla.services.api.DishService;
 import gr.jimmys.jimmysfoodzilla.services.api.DishesCacheService;
-import gr.jimmys.jimmysfoodzilla.services.api.JwtRenewalService;
 import gr.jimmys.jimmysfoodzilla.services.api.OrderService;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -28,9 +28,6 @@ import static gr.jimmys.jimmysfoodzilla.common.ErrorMessages.*;
 public class DishController {
     private final Logger logger = LoggerFactory.getLogger(DishController.class);
 
-    @Value("${auth0.audience}")
-    private String audience;
-
     @Autowired
     DishService dishService;
 
@@ -39,9 +36,6 @@ public class DishController {
 
     @Autowired
     DishesCacheService cache;
-
-    @Autowired
-    JwtRenewalService jwtRenewalService;
 
     @GetMapping("/GetDish/{id}")
     public ResponseEntity<Dish> getDish(@PathVariable("id") int id) {
@@ -62,12 +56,12 @@ public class DishController {
     }
 
     @PostMapping("/AddDish")
-    public ResponseEntity<Integer> addDish(@RequestBody AddDishDTO newDish) {
+    public ResponseEntity<Integer> addDish(@Valid @RequestBody AddDishDTO newDish) {
         var result = dishService.addDish(newDish);
         if (!result.isSuccess()) {
             logger.error("AddDish failed: {}", result.error());
-            switch(result.error()){
-               case CONFLICT:
+            switch (result.error()) {
+                case CONFLICT:
                     throw new ResponseStatusException(HttpStatus.CONFLICT, CONFLICT);
                 case BAD_DISH_PRICE_REQUEST:
                 case BAD_DISH_NAME_REQUEST:
@@ -81,11 +75,11 @@ public class DishController {
     }
 
     @PutMapping("/UpdateDish")
-    public ResponseEntity<Void> updateDish(@RequestBody AddDishDTOWithId dto) {
+    public ResponseEntity<Void> updateDish(@Valid @RequestBody AddDishDTOWithId dto) {
         var result = dishService.updateDish(dto);
         if (!result.isSuccess()) {
             logger.error("UpdateDish failed: {}", result.error());
-            switch(result.error()){
+            switch (result.error()) {
                 case NOT_FOUND:
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, NOT_FOUND);
                 case BAD_DISH_PRICE_REQUEST:
@@ -103,24 +97,28 @@ public class DishController {
         return result.isSuccess() ? ResponseEntity.ok().build() : ResponseEntity.notFound().build();
     }
 
-    //Authorized, default scheme
     @PostMapping("/Order")
-    public ResponseEntity<Void> createOrder(@RequestBody WebOrderDTO dto) {
+    public ResponseEntity<Void> createOrder(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody WebOrderDTO dto) {
+        if (!jwt.getSubject().equals(dto.userId())) {
+            logger.warn("CreateOrder: userId in body [{}] does not match JWT subject [{}]", dto.userId(), jwt.getSubject());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         var result = orderService.createOrder(dto);
         if (!result.isSuccess()) {
             logger.error("CreateOrder: {}", result.error());
-            ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().build();
         }
         return ResponseEntity.ok().build();
     }
 
-    //Authorized, default scheme
     @GetMapping("/GetUserOrders/{userId}")
-    public ResponseEntity<UserOrdersDTO> getUserOrders(@RequestHeader(HttpHeaders.AUTHORIZATION) String token, @PathVariable("userId") String userId) {
-        var validationResult = jwtRenewalService.validateToken(token, audience);
-        if (validationResult != HttpStatus.OK)
-            return ResponseEntity.status(validationResult).build();
-        //userId token check ok, we should retrieve this user's orders
+    public ResponseEntity<UserOrdersDTO> getUserOrders(@AuthenticationPrincipal Jwt jwt, @PathVariable("userId") String userId) {
+        // spring security already validated JWT (sig, exp, iss, aud),
+        // we only need to verify the caller is requesting their own orders
+        if (!jwt.getSubject().equals(userId)) {
+            logger.warn("GetUserOrders: path userId [{}] does not match JWT subject [{}]", userId, jwt.getSubject());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         return ResponseEntity.ok(orderService.getUserOrders(userId));
     }
 }
