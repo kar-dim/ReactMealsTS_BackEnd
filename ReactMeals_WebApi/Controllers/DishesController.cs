@@ -55,8 +55,7 @@ public class DishesController(ILogger<DishesController> logger, IDishesCacheServ
                 _ => BadRequest(ErrorMessages.BadRequest),
             };
         }
-        var dish = result.ResultValue as Dish;
-        return Ok(dish.DishId);
+        return Ok(result.Value.DishId);
     }
 
     //PUT api/Dishes/UpdateDish
@@ -90,13 +89,18 @@ public class DishesController(ILogger<DishesController> logger, IDishesCacheServ
     }
 
     //insert ORDER, body value:
-    // order: ([dish1, posotita1], [dish2, posotita2],... userId)
+    // order: ([dish1, quantity1], [dish2, quantity2],...)
     //must be logged in -> usage of Authorize attribute (auth0 jwt checks)
     [HttpPost("Order")]
     [Authorize(AuthenticationSchemes = "Default")]
     public async Task<ActionResult<WebOrder>> CreateOrder([FromBody] WebOrderDTO dto)
     {
-        var result = await orderService.CreateOrderAsync(dto);
+        //the order owner is the authenticated caller, not a value from the request body
+        var userId = GetUserId();
+        if (userId == null)
+            return Unauthorized(ErrorMessages.Unauthorized);
+
+        var result = await orderService.CreateOrderAsync(dto, userId);
         if (!result.IsSuccess)
         {
             logger.LogError("CreateOrder: {Error}", result.Error);
@@ -109,8 +113,7 @@ public class DishesController(ILogger<DishesController> logger, IDishesCacheServ
     [Authorize(AuthenticationSchemes = "Default")]
     public async Task<ActionResult<UserOrdersDTO>> GetUserOrders(string userId)
     {
-        var nameClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
-        if (nameClaim == null || nameClaim.Value != userId)
+        if (GetUserId() != userId)
         {
             logger.LogError("GetUserOrders: Unauthorized access for user {UserId}", userId);
             return Unauthorized(ErrorMessages.Unauthorized);
@@ -118,4 +121,7 @@ public class DishesController(ILogger<DishesController> logger, IDishesCacheServ
         var result = await orderService.GetUserOrdersAsync(userId);
         return Ok(result);
     }
+
+    //the authenticated user's id (auth0 "sub" -> NameIdentifier), null if absent
+    private string GetUserId() => User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
 }

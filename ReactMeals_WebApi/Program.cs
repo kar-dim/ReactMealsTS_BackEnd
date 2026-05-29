@@ -16,13 +16,15 @@ var m2mDomain = builder.Configuration["Auth0:M2M_Domain"];
 var defaultDomain = builder.Configuration["Auth0:Domain"];
 var m2mAudience = builder.Configuration["Auth0:M2M_Audience"];
 var defaultAudience = builder.Configuration["Auth0:Audience"];
+//read the M2M client secret from file once at startup (kept out of appsettings for security)
+builder.Configuration["Auth0:M2M_ClientSecret"] = File.ReadAllText("m2m_secret.txt").Trim();
 string[] allowedCorsOrigins = ["http://localhost:3000", "https://react-meals-ts-front-end.vercel.app"];
 string[] allowedCorsHeaders = ["X-Requested-With", "Content-Type", "Authorization", "ngrok-skip-browser-warning"];
 
 //db context (read connection string from appsettings)
 builder.Services.AddDbContext<MainDbContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("JimmysFoodzillaConnectionString")));
-//reposistories
+//repositories
 builder.Services.AddScoped<TokenRepository>();
 builder.Services.AddScoped<DishRepository>();
 builder.Services.AddScoped<OrderRepository>();
@@ -30,7 +32,6 @@ builder.Services.AddScoped<UserRepository>();
 
 // Add required services
 builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
 
 //cors (test only + frontend with VERCEL)
 builder.Services.AddCors(options => options.AddPolicy(name: corsPolicyName, policy => 

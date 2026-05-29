@@ -7,12 +7,6 @@ namespace ReactMeals_WebApi.Repositories;
 
 public class TokenRepository(MainDbContext context)
 {
-    public async Task AddManagementApiTokenAsync(string tokenValue, DateTime expiryDate)
-    {
-        context.Tokens.Add(new Token(tokenValue, TokenType.MANAGEMENT_API, expiryDate));
-        await context.SaveChangesAsync();
-    }
-
     public async Task<Token> GetManagementApiTokenAsync()
     {
         return await context.Tokens.AsNoTracking().Where(token => token.TokenType.Equals(TokenType.MANAGEMENT_API)).FirstOrDefaultAsync();

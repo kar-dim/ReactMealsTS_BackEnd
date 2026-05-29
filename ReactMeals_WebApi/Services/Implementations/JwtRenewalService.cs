@@ -4,7 +4,13 @@ namespace ReactMeals_WebApi.Services.Implementations;
 
 public class JwtRenewalService(IServiceScopeFactory serviceScopeFactory, ILogger<JwtRenewalService> logger) : IJwtRenewalService
 {
-    public string ManagementApiToken { get; set; } = string.Empty;
+    //written by the background renewal loop, read by request threads -> volatile for visibility
+    private volatile string _managementApiToken = string.Empty;
+    public string ManagementApiToken
+    {
+        get => _managementApiToken;
+        set => _managementApiToken = value;
+    }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -19,39 +25,54 @@ public class JwtRenewalService(IServiceScopeFactory serviceScopeFactory, ILogger
         logger.LogInformation("Renew token main loop started");
         while (!cancellationToken.IsCancellationRequested)
         {
-            // JwtService, TokenRepository, and DbContext are all createφ after each loop
-            using var scope = serviceScopeFactory.CreateScope();
-            var jwtService = scope.ServiceProvider.GetRequiredService<IJwtService>();
+            try
+            {
+                // JwtService, TokenRepository, and DbContext are all created fresh each loop
+                using var scope = serviceScopeFactory.CreateScope();
+                var jwtService = scope.ServiceProvider.GetRequiredService<IJwtService>();
 
-            logger.LogInformation("Retrieving local token...");
-            var token = await jwtService.RetrieveToken();
-            // If no token is found, or it is expired, we must renew it
-            if (token == null || token.ExpiryDate <= DateTime.Now)
-            {
-                logger.LogInformation("No token found in db, or it is expired, renewing...");
-                //try to renew the token and get the expiration time
-                var newAccessToken = await jwtService.RenewToken();
-                //something bad happened while renewing (network error etc) -> wait some seconds and try again later
-                if (newAccessToken == null)
+                logger.LogInformation("Retrieving local token...");
+                var token = await jwtService.RetrieveToken();
+                // If no token is found, or it is expired, we must renew it
+                if (token == null || token.ExpiryDate <= DateTime.Now)
                 {
-                    logger.LogError("Error while renewing token, waiting 20 seconds and trying again...");
-                    await Task.Delay(TimeSpan.FromSeconds(20), cancellationToken);
-                    continue;
+                    logger.LogInformation("No token found in db, or it is expired, renewing...");
+                    //try to renew the token and get the expiration time
+                    var newAccessToken = await jwtService.RenewToken();
+                    //something bad happened while renewing (network error etc) -> wait some seconds and try again later
+                    if (newAccessToken == null)
+                    {
+                        logger.LogError("Error while renewing token, waiting 20 seconds and trying again...");
+                        await Task.Delay(TimeSpan.FromSeconds(20), cancellationToken);
+                        continue;
+                    }
+                    //renew token and sleep until it's time to renew the token again
+                    TimeSpan sleepTime = newAccessToken.ExpiryDate.Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
+                    ManagementApiToken = newAccessToken.TokenValue;
+                    logger.LogInformation("Successfully renewed token");
+                    if (sleepTime > TimeSpan.Zero)
+                        await Task.Delay(sleepTime, cancellationToken);
                 }
-                //renew token and sleep until it's time to renew the token again
-                TimeSpan sleepTime = newAccessToken.ExpiryDate.Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
-                ManagementApiToken = newAccessToken.TokenValue;
-                logger.LogInformation("Successfully renewed token");
-                await Task.Delay(sleepTime, cancellationToken);
+                // The token is still valid, sleep until renew time
+                else
+                {
+                    logger.LogInformation("Successfully retrieved local token. It will expire at: " + token.ExpiryDate.ToString("dd/MM/yyyy HH:mm"));
+                    ManagementApiToken = token.TokenValue;
+                    TimeSpan sleepTime = token.ExpiryDate.Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
+                    if (sleepTime > TimeSpan.Zero)
+                        await Task.Delay(sleepTime, cancellationToken);
+                }
             }
-            // The token is still valid, sleep until renew time
-            else
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                logger.LogInformation("Successfully retrieved local token. It will expire at: " + token.ExpiryDate.ToString("dd/MM/yyyy HH:mm"));
-                ManagementApiToken = token.TokenValue;
-                TimeSpan sleepTime = token.ExpiryDate.Subtract(TimeSpan.FromSeconds(30)) - DateTime.Now;
-                if (sleepTime > TimeSpan.Zero)
-                    await Task.Delay(sleepTime, cancellationToken);
+                //normal shutdown
+                break;
+            }
+            catch (Exception ex)
+            {
+                // if something unexpected happens, log and retry after a short delay
+                logger.LogError("Unexpected error in token renewal loop: {Error}", ex.Message);
+                await Task.Delay(TimeSpan.FromSeconds(20), cancellationToken);
             }
         }
     }

@@ -11,7 +11,13 @@ public class NgrokTunnelService(IConfiguration config, IServer server, IHostAppl
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await WaitForApplicationStarted();
-        string localUrl = server.Features.Get<IServerAddressesFeature>().Addresses.Single(u => u.StartsWith("http://"));
+        var addresses = server.Features.Get<IServerAddressesFeature>()?.Addresses;
+        string localUrl = addresses?.FirstOrDefault(u => u.StartsWith("http://"));
+        if (localUrl == null)
+        {
+            logger.LogError("No http:// server address found! Cannot start ngrok tunnel...");
+            return;
+        }
         await StartTunnelAsync(localUrl, config["ngrok:url"], stoppingToken);
     }
 

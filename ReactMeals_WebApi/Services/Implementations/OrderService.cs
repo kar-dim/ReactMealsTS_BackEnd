@@ -9,9 +9,9 @@ namespace ReactMeals_WebApi.Services.Implementations
     public class OrderService(IDishesCacheService cache, OrderRepository orderRepo) : IOrderService
     {
         //Create the order, write to db
-        public async Task<Result> CreateOrderAsync(WebOrderDTO dto)
+        public async Task<Result> CreateOrderAsync(WebOrderDTO dto, string userId)
         {
-            if (dto?.Order == null || dto.UserId == null || dto.Order.Count == 0)
+            if (dto?.Order == null || string.IsNullOrEmpty(userId) || dto.Order.Count == 0)
                 return Result.Failure("Invalid order data");
 
             //Get the cost of each dish from the cache
@@ -28,7 +28,7 @@ namespace ReactMeals_WebApi.Services.Implementations
 
             //calculate total cost of each dish
             var totalCost = itemCosts.Sum(x => x.Cost.Value * x.Item.Dish_counter);
-            await orderRepo.AddAsync(WebOrderDTOMapping.OrderDTOtoOrder(dto, totalCost));
+            await orderRepo.AddAsync(WebOrderDTOMapping.OrderDTOtoOrder(dto, totalCost, userId));
             return Result.Success();
         }
 

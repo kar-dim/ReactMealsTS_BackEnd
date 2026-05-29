@@ -24,17 +24,13 @@ public class UsersController(UserRepository userRepository, RestClient client, I
     public async Task<ActionResult<List<User>>> GetUsers()
     {
         //check ManagementAPI token if exists from the injected service
-        string mApiToken = jwtRenewalService.ManagementApiToken;
-        if (IsNullOrEmpty(mApiToken))
-        {
-            logger.LogError("ManagementAPI Token does not exist");
+        if (!TryGetManagementToken(out var mApiToken))
             return Problem(ErrorMessages.InternalError);
-        }
 
         //send the request to auth0
         var request = new RestRequest("api/v2/users", Method.Get).AddHeader("Authorization", $"Bearer {mApiToken}");
         var response = await client.ExecuteAsync(request);
-        if (response == null || response.StatusCode != HttpStatusCode.OK || IsNullOrEmpty(response.Content))
+        if (IsBadResponse(response, HttpStatusCode.OK))
         {
             logger.LogError("Error in getting users info from api/v2/users");
             return Problem(ErrorMessages.InternalError);
@@ -80,12 +76,8 @@ public class UsersController(UserRepository userRepository, RestClient client, I
     public async Task<ActionResult<User>> UpdateUser([FromBody] User newUser)
     {
         //check ManagementAPI token if exists from the injected service
-        string mApiToken = jwtRenewalService.ManagementApiToken;
-        if (IsNullOrEmpty(mApiToken))
-        {
-            logger.LogError("ManagementAPI Token does not exist");
+        if (!TryGetManagementToken(out var mApiToken))
             return Problem(ErrorMessages.InternalError);
-        }
 
         //send the request to auth0 (HTTP PATCH) to update specific user data only
         var request = new RestRequest("api/v2/users/" + newUser.User_Id, Method.Patch)
@@ -95,7 +87,7 @@ public class UsersController(UserRepository userRepository, RestClient client, I
         string userJsonSerialize = JsonSerializer.Serialize(new Auth0UserSerialize(newUser.Email, new UserMetadata(newUser.Name, newUser.LastName, newUser.Address)));
         request.AddParameter("application/json", userJsonSerialize, ParameterType.RequestBody);
         var response = await client.ExecuteAsync(request);
-        if (response == null || response.StatusCode != HttpStatusCode.OK || IsNullOrEmpty(response.Content))
+        if (IsBadResponse(response, HttpStatusCode.OK))
         {
             logger.LogError("Error in patching user from api/v2/users");
             return Problem(ErrorMessages.InternalError);
@@ -112,18 +104,14 @@ public class UsersController(UserRepository userRepository, RestClient client, I
     public async Task<ActionResult<User>> DeleteUser(string userId)
     {
         //check ManagementAPI token if exists from the injected service
-        string mApiToken = jwtRenewalService.ManagementApiToken;
-        if (IsNullOrEmpty(mApiToken))
-        {
-            logger.LogError("ManagementAPI Token does not exist");
+        if (!TryGetManagementToken(out var mApiToken))
             return Problem(ErrorMessages.InternalError);
-        }
 
         //send the request to auth0 (HTTP DELETE) so that the User will be deleted from Auth0 servers
         var request = new RestRequest("api/v2/users/" + userId, Method.Delete).AddHeader("Authorization", $"Bearer {mApiToken}");
         var response = await client.ExecuteAsync(request);
-        //DELETE OK status is 204
-        if (response == null || response.StatusCode != HttpStatusCode.NoContent)
+        //DELETE OK status is 204 No Content (no body expected)
+        if (IsBadResponse(response, HttpStatusCode.NoContent, requireContent: false))
         {
             logger.LogError("Error in deleting user from api/v2/users");
             return Problem(ErrorMessages.InternalError);
@@ -131,4 +119,20 @@ public class UsersController(UserRepository userRepository, RestClient client, I
         //TODO remove from db? -> for now not..
         return Ok();
     }
+
+    //fetches the cached Auth0 Management API token
+    private bool TryGetManagementToken(out string token)
+    {
+        token = jwtRenewalService.ManagementApiToken;
+        if (IsNullOrEmpty(token))
+        {
+            logger.LogError("ManagementAPI Token does not exist");
+            return false;
+        }
+        return true;
+    }
+
+    //true if the Auth0 response is missing, has an unexpected status, or lacks a required body
+    private static bool IsBadResponse(RestResponse response, HttpStatusCode expected, bool requireContent = true) =>
+        response == null || response.StatusCode != expected || (requireContent && IsNullOrEmpty(response.Content));
 }

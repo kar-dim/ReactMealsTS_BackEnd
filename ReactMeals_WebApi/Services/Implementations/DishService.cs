@@ -1,5 +1,6 @@
 ﻿using ReactMeals_WebApi.Common;
 using ReactMeals_WebApi.DTO;
+using ReactMeals_WebApi.Models;
 using ReactMeals_WebApi.Repositories;
 using ReactMeals_WebApi.Services.Interfaces;
 
@@ -17,18 +18,18 @@ namespace ReactMeals_WebApi.Services.Implementations
         }
 
         //Create the dish, write to db
-        public async Task<Result> AddDishAsync(AddDishDTO dto)
+        public async Task<Result<Dish>> AddDishAsync(AddDishDTO dto)
         {
             if (dto.DishName == null)
-                return Result.Failure(ErrorMessages.BadDishNameRequest);
+                return Result<Dish>.Failure(ErrorMessages.BadDishNameRequest);
             if (dto.Price <= 0 || dto.Price > 256)
-                return Result.Failure(ErrorMessages.BadDishPriceRequest);
+                return Result<Dish>.Failure(ErrorMessages.BadDishPriceRequest);
             if (cache.GetDishByName(dto.DishName) != null)
-                return Result.Failure(ErrorMessages.Conflict);
+                return Result<Dish>.Failure(ErrorMessages.Conflict);
             string fileName = GenerateDishFilename(dto.DishName, dto.DishImageBase64, out byte[] imageBytes);
             if (fileName == null)
-                return Result.Failure(ErrorMessages.BadRequest);
-            
+                return Result<Dish>.Failure(ErrorMessages.BadRequest);
+
             var dish = AddDishDTOMapping.AddDishDTOtoDish(dto);
             dish.Dish_url = fileName;
 
@@ -36,7 +37,7 @@ namespace ReactMeals_WebApi.Services.Implementations
             cache.AddCacheEntry(dish);
             imageService.SaveImage(fileName, imageBytes);
 
-            return Result.Success(dish);
+            return Result<Dish>.Success(dish);
         }
 
         //Update the dish, overwrite db entry

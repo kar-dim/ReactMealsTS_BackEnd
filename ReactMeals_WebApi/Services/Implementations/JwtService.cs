@@ -12,7 +12,7 @@ public class JwtService(TokenRepository tokenRepository, ILogger<JwtService> log
 {
     private readonly ManagementInputDTO requestBody = new ManagementInputDTO(
         ClientId: configuration["Auth0:M2M_ClientID"],
-        ClientSecret: File.ReadAllText("m2m_secret.txt").Trim(),
+        ClientSecret: configuration["Auth0:M2M_ClientSecret"],
         Audience: $"https://{configuration["Auth0:M2M_Domain"]}/api/v2/",
         GrantType: "client_credentials"
      );
