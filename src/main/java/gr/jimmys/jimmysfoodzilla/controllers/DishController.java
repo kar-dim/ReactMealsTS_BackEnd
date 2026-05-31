@@ -81,7 +81,7 @@ public class DishController {
             logger.error("UpdateDish failed: {}", result.error());
             switch (result.error()) {
                 case NOT_FOUND:
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, NOT_FOUND);
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, NOT_FOUND);
                 case BAD_DISH_PRICE_REQUEST:
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, BAD_DISH_PRICE_REQUEST);
                 default:

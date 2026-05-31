@@ -10,8 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 @Service
 public class DishImageServiceImpl implements DishImageService {
@@ -19,21 +18,24 @@ public class DishImageServiceImpl implements DishImageService {
 
     private static final Path IMAGE_FOLDER = Paths.get("uploads", "dishimages");
 
-    private static final HashMap<byte[], String> knownMagicBytes;
+    private record MagicBytes(byte[] signature, String extension) {}
 
-    static {
-        knownMagicBytes = new HashMap<>();
-        knownMagicBytes.put(new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF}, "jpg");
-        knownMagicBytes.put(new byte[]{(byte) 0x89, (byte) 0x50, (byte) 0x4E, (byte) 0x47}, "png");
-        knownMagicBytes.put(new byte[]{(byte) 0x47, (byte) 0x49, (byte) 0x46, (byte) 0x38}, "gif");
-        knownMagicBytes.put(new byte[]{(byte) 0x42, (byte) 0x4D}, "bmp");
-    }
+    private static final List<MagicBytes> KNOWN_MAGIC_BYTES = List.of(
+            new MagicBytes(new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF}, "jpg"),
+            new MagicBytes(new byte[]{(byte) 0x89, (byte) 0x50, (byte) 0x4E, (byte) 0x47}, "png"),
+            new MagicBytes(new byte[]{(byte) 0x47, (byte) 0x49, (byte) 0x46, (byte) 0x38}, "gif"),
+            new MagicBytes(new byte[]{(byte) 0x42, (byte) 0x4D}, "bmp")
+    );
 
     @Override
     public String validateImage(byte[] imageData) {
-        for (Map.Entry<byte[], String> entry : knownMagicBytes.entrySet()) {
-            if (Arrays.compare(entry.getKey(), 0, entry.getKey().length, imageData, 0, entry.getKey().length) == 0)
-                return entry.getValue();
+        if (imageData == null)
+            return null;
+        for (MagicBytes magic : KNOWN_MAGIC_BYTES) {
+            byte[] sig = magic.signature();
+            if (imageData.length >= sig.length
+                    && Arrays.compare(sig, 0, sig.length, imageData, 0, sig.length) == 0)
+                return magic.extension();
         }
         return null;
     }

@@ -25,6 +25,6 @@ public class OrderItem {
 
     //DISH reference
     @ManyToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "DishId", referencedColumnName = "DishId")
+    @JoinColumn(name = "dish_id") // references Dish's @Id (dish_id) by default
     private Dish dish;
 }

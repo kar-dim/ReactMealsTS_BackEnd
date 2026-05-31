@@ -5,16 +5,14 @@ import gr.jimmys.jimmysfoodzilla.dto.*;
 import gr.jimmys.jimmysfoodzilla.models.User;
 import gr.jimmys.jimmysfoodzilla.models.DishWithCounter;
 import gr.jimmys.jimmysfoodzilla.models.util.WebOrderDTOToEntity;
-import gr.jimmys.jimmysfoodzilla.repository.DishRepository;
 import gr.jimmys.jimmysfoodzilla.repository.OrderRepository;
 import gr.jimmys.jimmysfoodzilla.repository.UserRepository;
 import gr.jimmys.jimmysfoodzilla.services.api.DishesCacheService;
 import gr.jimmys.jimmysfoodzilla.services.api.OrderService;
 import jakarta.persistence.EntityManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -36,9 +34,6 @@ public class OrderServiceImpl implements OrderService {
     UserRepository userRepository;
 
     @Autowired
-    DishRepository dishRepository;
-
-    @Autowired
     DishesCacheService cache;
 
     private final EntityManager entityManager;
@@ -48,6 +43,7 @@ public class OrderServiceImpl implements OrderService {
     }
     //Create the order, write to db
     @Override
+    @Transactional
     public Result createOrder(WebOrderDTO dto) {
         Optional<User> user;
         if (dto == null || dto.order() == null || dto.userId() == null || dto.order().length == 0 || (user = userRepository.findById(dto.userId())).isEmpty())

@@ -14,32 +14,32 @@ import java.util.Objects;
 @AllArgsConstructor
 @Data
 @Entity
-@Table(name = "Dishes")
+@Table(name = "dishes")
 public class Dish {
     @JsonProperty("dishId")
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "DishId")
+    @Column(name = "dish_id")
     private int id;
 
     @JsonProperty("dish_name")
-    @Column(name = " Dish_name", columnDefinition = "VARCHAR(MAX)")
+    @Column(name = "dish_name", columnDefinition = "VARCHAR(MAX)")
     private String name;
 
     @JsonProperty("dish_description")
-    @Column(name = " Dish_description", columnDefinition = "VARCHAR(MAX)")
+    @Column(name = "dish_description", columnDefinition = "VARCHAR(MAX)")
     private String description;
 
     @JsonProperty("price")
-    @Column(name = "Price", precision = 18, scale = 2)
+    @Column(name = "price", precision = 18, scale = 2)
     private BigDecimal price;
 
     @JsonProperty("dish_extended_info")
-    @Column(name = " Dish_extended_info", columnDefinition = "VARCHAR(MAX)")
+    @Column(name = "dish_extended_info", columnDefinition = "VARCHAR(MAX)")
     private String extendedInfo;
 
     @JsonProperty("dish_url")
-    @Column(name = " Dish_url", columnDefinition = "VARCHAR(MAX)")
+    @Column(name = "dish_url", columnDefinition = "VARCHAR(MAX)")
     private String url;
 
     @Override

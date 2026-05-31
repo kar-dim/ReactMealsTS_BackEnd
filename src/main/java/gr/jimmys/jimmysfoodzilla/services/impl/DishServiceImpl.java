@@ -32,10 +32,22 @@ public class DishServiceImpl implements DishService {
 
     private static final int MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
 
+    private boolean isInvalidPrice(BigDecimal price) {
+        return price == null || price.compareTo(BigDecimal.ZERO) <= 0 || price.compareTo(maxPrice) > 0;
+    }
+
     @Override
     public String generateDishFilename(String dishName, String dishB64, Holder<byte[]> imageBytes) {
-        imageBytes.setValue(Base64.getDecoder().decode(dishB64));
-        if (imageBytes.getValue().length > MAX_IMAGE_BYTES)
+        if (dishName == null || dishB64 == null)
+            return null;
+        byte[] decoded;
+        try {
+            decoded = Base64.getDecoder().decode(dishB64);
+        } catch (IllegalArgumentException e) {
+            return null; // malformed base64 -> treat it as a bad request
+        }
+        imageBytes.setValue(decoded);
+        if (decoded.length > MAX_IMAGE_BYTES)
             return null;
         var extension = imageService.validateImage(imageBytes.getValue());
         if (extension == null)
@@ -53,7 +65,7 @@ public class DishServiceImpl implements DishService {
             return Result.failure(BAD_DISH_NAME_REQUEST);
         if (cache.existDishByName(dto.getDishName()))
             return Result.failure(CONFLICT);
-        if (dto.getPrice() == null || dto.getPrice().compareTo(BigDecimal.ZERO) <= 0 || dto.getPrice().compareTo(maxPrice) > 0)
+        if (isInvalidPrice(dto.getPrice()))
             return Result.failure(BAD_DISH_PRICE_REQUEST);
         var imageBytes = new Holder<byte[]>();
         var fileName = generateDishFilename(dto.getDishName(), dto.getDishImageBase64(), imageBytes);
@@ -72,7 +84,7 @@ public class DishServiceImpl implements DishService {
         var existingDish = cache.getDish(dto.getDishId());
         if (existingDish == null)
             return Result.failure(NOT_FOUND);
-        if (dto.getPrice() == null || dto.getPrice().compareTo(BigDecimal.ZERO) <= 0 || dto.getPrice().compareTo(maxPrice) > 0)
+        if (isInvalidPrice(dto.getPrice()))
             return Result.failure(BAD_DISH_PRICE_REQUEST);
         var imageBytes = new Holder<byte[]>();
         String fileName = generateDishFilename(dto.getDishName(), dto.getDishImageBase64(), imageBytes);
