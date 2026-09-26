@@ -47,7 +47,7 @@ public class UsersController(UserRepository userRepository, RestClient client, I
         foreach (var user in users)
         {
             //only send users that have defined values (else skip them entirely)
-            if (!(user == null || IsNullOrEmpty(user.Email) || IsNullOrEmpty(user.UserId) || IsNullOrEmpty(user.UserMetadata.Name) || IsNullOrEmpty(user.UserMetadata.LastName) || IsNullOrEmpty(user.UserMetadata.Address)))
+            if (!(user == null || IsNullOrEmpty(user.Email) || IsNullOrEmpty(user.UserId) || user.UserMetadata == null || IsNullOrEmpty(user.UserMetadata.Name) || IsNullOrEmpty(user.UserMetadata.LastName) || IsNullOrEmpty(user.UserMetadata.Address)))
                 usersToReturn.Add(new User(user.UserId, user.Email, user.UserMetadata.Name, user.UserMetadata.LastName, user.UserMetadata.Address));
         }
         return Ok(usersToReturn); //if empty it is still OK, client will handle it
@@ -56,15 +56,18 @@ public class UsersController(UserRepository userRepository, RestClient client, I
     //POST api/Users/CreateUser
     //used only by AUTH0 server
     [HttpPost("CreateUser")]
-    [Authorize(AuthenticationSchemes = "M2M_UserRegister")]
+    [Authorize(AuthenticationSchemes = "M2M_UserRegister", Policy = "RegistrationClientPolicy")]
     public async Task<ActionResult<User>> CreateUser([FromBody] User userToCreate)
     {
+        if (userToCreate == null || IsNullOrWhiteSpace(userToCreate.User_Id) ||
+            IsNullOrWhiteSpace(userToCreate.Email))
+            return BadRequest(ErrorMessages.BadRequest);
         if (await userRepository.UserExists(userToCreate))
         {
             logger.LogError("Error: User already exists");
             return Problem(ErrorMessages.InternalError);
         }
-        logger.LogInformation("New User Created [Sent from Auth0]: {User}", userToCreate.ToString());
+        logger.LogInformation("New user registered from Auth0");
         await userRepository.AddAsync(userToCreate);
         return Ok(userToCreate);
     }
@@ -75,12 +78,17 @@ public class UsersController(UserRepository userRepository, RestClient client, I
     [HttpPut("UpdateUser")]
     public async Task<ActionResult<User>> UpdateUser([FromBody] User newUser)
     {
+        if (newUser == null || IsNullOrWhiteSpace(newUser.User_Id))
+            return BadRequest(ErrorMessages.BadRequest);
+        if (!await userRepository.UserExists(newUser))
+            return NotFound(ErrorMessages.NotFound);
         //check ManagementAPI token if exists from the injected service
         if (!TryGetManagementToken(out var mApiToken))
             return Problem(ErrorMessages.InternalError);
 
         //send the request to auth0 (HTTP PATCH) to update specific user data only
-        var request = new RestRequest("api/v2/users/" + newUser.User_Id, Method.Patch)
+        var request = new RestRequest("api/v2/users/{id}", Method.Patch)
+            .AddUrlSegment("id", newUser.User_Id)
             .AddHeader("Authorization", $"Bearer {mApiToken}")
             .AddHeader("Content-Type", "application/json")
             .AddHeader("Accept", "application/json");
@@ -108,7 +116,9 @@ public class UsersController(UserRepository userRepository, RestClient client, I
             return Problem(ErrorMessages.InternalError);
 
         //send the request to auth0 (HTTP DELETE) so that the User will be deleted from Auth0 servers
-        var request = new RestRequest("api/v2/users/" + userId, Method.Delete).AddHeader("Authorization", $"Bearer {mApiToken}");
+        var request = new RestRequest("api/v2/users/{id}", Method.Delete)
+            .AddUrlSegment("id", userId)
+            .AddHeader("Authorization", $"Bearer {mApiToken}");
         var response = await client.ExecuteAsync(request);
         //DELETE OK status is 204 No Content (no body expected)
         if (IsBadResponse(response, HttpStatusCode.NoContent, requireContent: false))

@@ -22,7 +22,7 @@ This repository contains the **backend** implementation (in both .NET and Java) 
 ### 🔹 .NET Core (default)
 
 - Uses EF Core and SQL Server.
-- Auth0 secret must stored in a plain text file `m2m_secret.txt` at the root of the project (should contain ONLY the Auth0 M2M client secret value).
+- Set `Auth0__M2M_ClientSecret` as an environment secret, or place the secret value alone in `m2m_secret.txt` at the app content root for local development.
 
 ### 🔸 Java Spring Boot (branch: `spring`)
 
@@ -58,6 +58,12 @@ auth0.m2m_clientsecret=...
 3. Configure your Auth0 secrets as described above.
 4. Start the backend server.
 5. Launch the frontend described at [ReactMealsTS_FrontEnd](https://github.com/kar-dim/ReactMealsTS_FrontEnd).
+
+Before starting an existing database with this version, apply the `PreserveOrderItems` EF Core migration. It copies current dish details into existing order items, changes the dish foreign key so a dish with orders cannot be deleted, and removes previously stored Management API bearer tokens. New Management API tokens are kept in memory. Details already lost through earlier dish deletions cannot be restored by the migration.
+
+With the EF Core CLI installed, run `dotnet ef database update --project ReactMeals_WebApi/ReactMeals_WebApi.csproj` from the repository root.
+
+The `CreateUser` endpoint accepts only tokens whose `azp` or `client_id` claim matches `Auth0:M2M_RegistrationClientID` (or `Auth0:M2M_ClientID` when that setting is absent). Configure this to the Auth0 Action client ID before deploying. Set `Images:Directory` to a writable, persistent directory for uploaded dish images; it defaults to `Images` under the app content root. Copy existing dish images into that directory when changing it.
 
 ---
 

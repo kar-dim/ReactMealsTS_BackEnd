@@ -2,9 +2,9 @@
 
 namespace ReactMeals_WebApi.Services.Implementations
 {
-    public class DishImageService(ILogger<DishImageService> logger) : IDishImageService
+    public class DishImageService(ILogger<DishImageService> logger, IConfiguration configuration, IHostEnvironment environment) : IDishImageService
     {
-        private static readonly string ImagePath = "Images";
+        private readonly string _imagePath = Path.GetFullPath(configuration["Images:Directory"] ?? "Images", environment.ContentRootPath);
         private static readonly (byte[] Magic, string Extension)[] knownMagicBytes =
         [
             (new byte[] { 0xFF, 0xD8, 0xFF }, "jpg"),
@@ -28,9 +28,12 @@ namespace ReactMeals_WebApi.Services.Implementations
 
         public void DeleteImage(string fileName)
         {
+            if (string.IsNullOrWhiteSpace(fileName) || Path.GetFileName(fileName) != fileName ||
+                fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+                return;
             try 
             {
-                File.Delete(Path.Combine(ImagePath, fileName));
+                File.Delete(Path.Combine(_imagePath, fileName));
             }
             catch (Exception ex)
             {
@@ -40,20 +43,18 @@ namespace ReactMeals_WebApi.Services.Implementations
 
         public void SaveImage(string fileName, byte[] data)
         {
-            try
-            {
-                File.WriteAllBytes(Path.Combine(ImagePath, fileName), data);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError("Could not save image {FileName}: {Error}", fileName, ex.Message);
-            }
+            if (string.IsNullOrWhiteSpace(fileName) || Path.GetFileName(fileName) != fileName ||
+                fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+                throw new ArgumentException("Invalid image filename", nameof(fileName));
+            Directory.CreateDirectory(_imagePath);
+            using var stream = new FileStream(Path.Combine(_imagePath, fileName), FileMode.CreateNew, FileAccess.Write);
+            stream.Write(data);
         }
 
         public void ReplaceImage(string oldFile, string newFile, byte[] data)
         {
-            DeleteImage(oldFile);
             SaveImage(newFile, data);
+            DeleteImage(oldFile);
         }
     }
 }

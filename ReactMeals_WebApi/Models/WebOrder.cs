@@ -20,6 +20,10 @@ public class WebOrderItem
     public int WebOrderId { get; set; }
     public WebOrder WebOrder { get; set; } //used by EF
     public int Dish_counter { get; set; }
+    public string Dish_name { get; set; }
+    public string Dish_description { get; set; }
+    [Precision(18, 2)]
+    public decimal Price { get; set; }
 }
 public class WebOrder
 {

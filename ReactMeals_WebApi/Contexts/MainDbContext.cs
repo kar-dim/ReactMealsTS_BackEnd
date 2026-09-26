@@ -11,4 +11,13 @@ public class MainDbContext : DbContext
     public DbSet<Dish> Dishes { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<Token> Tokens { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<WebOrderItem>()
+            .HasOne(item => item.Dish)
+            .WithMany()
+            .HasForeignKey(item => item.DishId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
 }

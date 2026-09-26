@@ -1,14 +1,13 @@
 ﻿using ReactMeals_WebApi.Common;
 using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
-using ReactMeals_WebApi.Repositories;
 using ReactMeals_WebApi.Services.Interfaces;
 using RestSharp;
 using System.Net;
 
 namespace ReactMeals_WebApi.Services.Implementations;
 
-public class JwtService(TokenRepository tokenRepository, ILogger<JwtService> logger, IConfiguration configuration, RestClient client) : IJwtService
+public class JwtService(ILogger<JwtService> logger, IConfiguration configuration, RestClient client) : IJwtService
 {
     private readonly ManagementInputDTO requestBody = new ManagementInputDTO(
         ClientId: configuration["Auth0:M2M_ClientID"],
@@ -17,14 +16,6 @@ public class JwtService(TokenRepository tokenRepository, ILogger<JwtService> log
         GrantType: "client_credentials"
      );
     
-    public async Task<Token> RetrieveToken()
-    {
-        var tokenFromDb = await tokenRepository.GetManagementApiTokenAsync();
-        if (tokenFromDb == null)
-            logger.LogInformation("No ManagementAPI Token found in db...");
-        return tokenFromDb;
-    }
-
     //call the Auth0 Rest service to renew the token
     public async Task<Token> RenewToken()
     {
@@ -36,16 +27,14 @@ public class JwtService(TokenRepository tokenRepository, ILogger<JwtService> log
             return null;
         }
         var tokenData = response.Data;
-        if (tokenData.ExpiresIn == 0 || tokenData.TokenType == null || tokenData.AccessToken == null || tokenData.Scope == null)
+        if (tokenData.ExpiresIn <= 30 || !string.Equals(tokenData.TokenType, "Bearer", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(tokenData.AccessToken) || tokenData.Scope == null)
         {
             logger.LogCritical("ManagementAPI Token is malformed! Check Auth0 configuration");
             return null; //let's consider it "expired" if no "exp" claim is found (it should never happen)
         }
 
         DateTime tokenExpireDateTime = DateTime.Now.AddSeconds(tokenData.ExpiresIn);
-        await tokenRepository.ReplaceManagementApiTokenAsync(tokenData.AccessToken, tokenExpireDateTime);
-        logger.LogInformation("Auth0 Management API Token successfully saved");
-
         return new Token(tokenData.AccessToken, TokenType.MANAGEMENT_API, tokenExpireDateTime);
     }
 }

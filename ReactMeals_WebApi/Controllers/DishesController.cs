@@ -1,5 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using ReactMeals_WebApi.Common;
 using ReactMeals_WebApi.DTO;
 using ReactMeals_WebApi.Models;
@@ -15,6 +16,7 @@ public class DishesController(ILogger<DishesController> logger, IDishesCacheServ
 {
     //GET api/Dishes/GetDish/id
     //public method
+    [AllowAnonymous]
     [HttpGet("GetDish/{id:int}")]
     public ActionResult<Dish> GetDish(int id)
     {
@@ -30,6 +32,7 @@ public class DishesController(ILogger<DishesController> logger, IDishesCacheServ
 
     //GET api/Dishes/GetDishes
     //public method
+    [AllowAnonymous]
     [HttpGet("GetDishes")]
     public ActionResult<IEnumerable<Dish>> GetDishes()
     {
@@ -42,6 +45,7 @@ public class DishesController(ILogger<DishesController> logger, IDishesCacheServ
     //only for Admins, to add new dish to the database
     [Authorize(AuthenticationSchemes = "Default", Policy = "AdminPolicy")]
     [HttpPost("AddDish")]
+    [RequestSizeLimit(8_000_000)]
     public async Task<IActionResult> AddDish([FromBody] AddDishDTO dto)
     {
         var result = await dishService.AddDishAsync(dto);
@@ -62,6 +66,7 @@ public class DishesController(ILogger<DishesController> logger, IDishesCacheServ
     //only for Admins, to edit a dish
     [Authorize(AuthenticationSchemes = "Default", Policy = "AdminPolicy")]
     [HttpPut("UpdateDish")]
+    [RequestSizeLimit(8_000_000)]
     public async Task<ActionResult<Dish>> UpdateDish([FromBody] AddDishDTOWithId dto)
     {
         var result = await dishService.UpdateDishAsync(dto);
@@ -71,6 +76,8 @@ public class DishesController(ILogger<DishesController> logger, IDishesCacheServ
             return result.Error switch
             {
                 ErrorMessages.BadUpdateDishRequest => BadRequest(ErrorMessages.BadUpdateDishRequest),
+                ErrorMessages.Conflict => Conflict(ErrorMessages.Conflict),
+                ErrorMessages.BadDishNameRequest => BadRequest(ErrorMessages.BadDishNameRequest),
                 ErrorMessages.BadDishPriceRequest => BadRequest(ErrorMessages.BadDishPriceRequest),
                 _ => BadRequest(ErrorMessages.BadRequest),
             };
@@ -85,14 +92,18 @@ public class DishesController(ILogger<DishesController> logger, IDishesCacheServ
     public async Task<ActionResult<Dish>> DeleteDish(int id)
     {
         var result = await dishService.DeleteDishAsync(id);
-        return result.IsSuccess ? Ok() : NotFound(ErrorMessages.NotFound + $" Dish with ID {id} not found");
+        return result.IsSuccess ? Ok() : result.Error == ErrorMessages.Conflict
+            ? Conflict("Dish belongs to an existing order")
+            : NotFound(ErrorMessages.NotFound + $" Dish with ID {id} not found");
     }
 
     //insert ORDER, body value:
     // order: ([dish1, quantity1], [dish2, quantity2],...)
     //must be logged in -> usage of Authorize attribute (auth0 jwt checks)
     [HttpPost("Order")]
+    [EnableRateLimiting("orderPolicy")]
     [Authorize(AuthenticationSchemes = "Default")]
+    [RequestSizeLimit(64_000)]
     public async Task<ActionResult<WebOrder>> CreateOrder([FromBody] WebOrderDTO dto)
     {
         //the order owner is the authenticated caller, not a value from the request body
@@ -109,16 +120,21 @@ public class DishesController(ILogger<DishesController> logger, IDishesCacheServ
         return Ok();
     }
 
-    [HttpGet("GetUserOrders/{userId}")]
+    [HttpGet("GetUserOrders")]
+
     [Authorize(AuthenticationSchemes = "Default")]
-    public async Task<ActionResult<UserOrdersDTO>> GetUserOrders(string userId)
+    public async Task<ActionResult<UserOrdersDTO>> GetUserOrders()
     {
-        if (GetUserId() != userId)
-        {
-            logger.LogError("GetUserOrders: Unauthorized access for user {UserId}", userId);
+        var callerId = GetUserId();
+        if (string.IsNullOrWhiteSpace(callerId))
             return Unauthorized(ErrorMessages.Unauthorized);
-        }
-        var result = await orderService.GetUserOrdersAsync(userId);
+
+
+
+
+
+
+        var result = await orderService.GetUserOrdersAsync(callerId);
         return Ok(result);
     }
 

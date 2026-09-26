@@ -16,13 +16,13 @@ exports.onExecutePostUserRegistration = async (event) => {
   let options = { method: 'POST',
     url: `https://dev-f0vakdckhtwh0dl8.us.auth0.com/oauth/token`,
     headers: { 'content-type': 'application/json' },
-    data: `{"client_id":"${client_id}","client_secret":"${client_secret}","audience":"https://jimmys/registeruser/api","grant_type":"client_credentials"}` 
+    data: { client_id, client_secret, audience: "https://jimmys/registeruser/api", grant_type: "client_credentials" }
   };
   let res = null;
   try {
      res = await axios(options);
   } catch (err) {
-    throw new Error(err);
+    throw new Error('Could not acquire registration token');
   }
   //call .NET API Controller (send the token + user data to insert to db)
   //.NET API "hosted" with NGROK, but could be a normal server
@@ -30,17 +30,15 @@ exports.onExecutePostUserRegistration = async (event) => {
   const user = {
     user_id: event.user.user_id,
     email: event.user.email,
-    name: event.user.user_metadata.name,
-    last_name: event.user.user_metadata.last_name,
-    address: event.user.user_metadata.address
+    name: event.user.user_metadata?.name ?? null,
+    last_name: event.user.user_metadata?.last_name ?? null,
+    address: event.user.user_metadata?.address ?? null
   }
-  console.log("USER: ", user);
   options = { method: 'POST',
     url: `https://solely-useful-grouse.ngrok-free.app/api/Users/CreateUser`,
     headers: { 'content-type': 'application/json', Authorization: `Bearer ${access_token}`},
-    data: `{"user_id": "${user.user_id}", "email": "${user.email}", "name": "${user.name}","lastName": "${user.last_name}","address": "${user.address}"}` 
+    data: { user_id: user.user_id, email: user.email, name: user.name, lastName: user.last_name, address: user.address }
   };
-  console.log("OPTIONS: ",options.data);
   try {
      res = await axios(options);
   } catch (err) {
@@ -60,9 +58,11 @@ AFTER LOGIN ACTION (ADD USER METADATA TO IDTOKEN CLAIM -> CUSTOM DATA WILL BE AV
 exports.onExecutePostLogin = async (event, api) => {
   if (event.authorization) {
     const namespace = 'https://jimmys/api';
-    api.idToken.setCustomClaim(`${namespace}/user_metadata.name`, event.user.user_metadata.name);
-    api.idToken.setCustomClaim(`${namespace}/user_metadata.last_name`, event.user.user_metadata.last_name);
-    api.idToken.setCustomClaim(`${namespace}/user_metadata.address`, event.user.user_metadata.address); 
+    if (event.user.user_metadata) {
+      api.idToken.setCustomClaim(`${namespace}/user_metadata.name`, event.user.user_metadata.name);
+      api.idToken.setCustomClaim(`${namespace}/user_metadata.last_name`, event.user.user_metadata.last_name);
+      api.idToken.setCustomClaim(`${namespace}/user_metadata.address`, event.user.user_metadata.address);
+    }
   }
 };
 

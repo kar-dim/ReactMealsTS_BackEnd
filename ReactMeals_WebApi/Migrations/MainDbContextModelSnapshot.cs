@@ -132,6 +132,16 @@ namespace ReactMeals_WebApi.Migrations
                     b.Property<int>("Dish_counter")
                         .HasColumnType("int");
 
+                    b.Property<string>("Dish_name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Dish_description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int>("WebOrderId")
                         .HasColumnType("int");
 
@@ -160,7 +170,7 @@ namespace ReactMeals_WebApi.Migrations
                     b.HasOne("ReactMeals_WebApi.Models.Dish", "Dish")
                         .WithMany()
                         .HasForeignKey("DishId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("ReactMeals_WebApi.Models.WebOrder", "WebOrder")
