@@ -6,12 +6,20 @@ using ReactMeals_WebApi.Services.Interfaces;
 
 namespace ReactMeals_WebApi.Services.Implementations
 {
-    public class DishService(DishRepository dishRepo, IDishesCacheService cache, IDishImageService imageService) : IDishService
+    public class DishService(DishRepository dishRepo, IDishesCacheService cache, IDishImageService imageService, ILogger<DishService> logger = null) : IDishService
     {
+        public const decimal MinDishPrice = 0.01m;
+        public const decimal MaxDishPrice = 256.00m;
+        public const int MaxBase64StringLength = 7_000_000;
+        public const int MaxImageSizeBytes = 5_000_000;
+
+        private static bool IsValidPrice(decimal price) =>
+            price >= MinDishPrice && price <= MaxDishPrice && decimal.Round(price, 2) == price;
+
         private string GenerateDishFilename(string dishB64, out byte[] imageBytes)
         {
             imageBytes = null;
-            if (string.IsNullOrWhiteSpace(dishB64) || dishB64.Length > 7_000_000)
+            if (string.IsNullOrWhiteSpace(dishB64) || dishB64.Length > MaxBase64StringLength)
                 return null;
             try
             {
@@ -21,7 +29,7 @@ namespace ReactMeals_WebApi.Services.Implementations
             {
                 return null;
             }
-            if (imageBytes.Length > 5_000_000)
+            if (imageBytes.Length > MaxImageSizeBytes)
                 return null;
             string extension = imageService.ValidateImage(imageBytes);
             if (extension == null)
@@ -34,7 +42,7 @@ namespace ReactMeals_WebApi.Services.Implementations
         {
             if (string.IsNullOrWhiteSpace(dto?.DishName))
                 return Result<Dish>.Failure(ErrorMessages.BadDishNameRequest);
-            if (dto.Price <= 0 || dto.Price > 256 || decimal.Round(dto.Price, 2) != dto.Price)
+            if (!IsValidPrice(dto.Price))
                 return Result<Dish>.Failure(ErrorMessages.BadDishPriceRequest);
             if (cache.GetDishByName(dto.DishName) != null)
                 return Result<Dish>.Failure(ErrorMessages.Conflict);
@@ -71,7 +79,7 @@ namespace ReactMeals_WebApi.Services.Implementations
             var sameName = cache.GetDishByName(dto.DishName);
             if (sameName != null && sameName.DishId != dto.DishId)
                 return Result.Failure(ErrorMessages.Conflict);
-            if (dto.Price <= 0 || dto.Price > 256 || decimal.Round(dto.Price, 2) != dto.Price)
+            if (!IsValidPrice(dto.Price))
                 return Result.Failure(ErrorMessages.BadDishPriceRequest);
             string fileName = existingDish.Dish_url;
             byte[] imageBytes = null;
@@ -131,8 +139,9 @@ namespace ReactMeals_WebApi.Services.Implementations
             {
                 await dishRepo.RemoveAsync(dish);
             }
-            catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
             {
+                logger?.LogError(ex, "Failed to delete dish {DishId} due to database constraint violation.", id);
                 return Result.Failure(ErrorMessages.Conflict);
             }
             cache.DeleteCacheEntry(id);

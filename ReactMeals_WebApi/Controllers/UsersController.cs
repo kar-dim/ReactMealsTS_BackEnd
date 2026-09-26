@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ReactMeals_WebApi.Common;
 using ReactMeals_WebApi.DTO;
@@ -37,17 +37,18 @@ public class UsersController(UserRepository userRepository, RestClient client, I
         }
 
         var users = JsonSerializer.Deserialize<List<Auth0UserDeserialize>>(response.Content);
-        List<User> usersToReturn = [];
+
         if (users == null || users.Count == 0)
         {
             logger.LogError("Users returned are malformed! Check Auth0 configuration");
             return Problem(ErrorMessages.InternalError);
         }
 
+        List<User> usersToReturn = [];
         foreach (var user in users)
         {
             //only send users that have defined values (else skip them entirely)
-            if (!(user == null || IsNullOrEmpty(user.Email) || IsNullOrEmpty(user.UserId) || user.UserMetadata == null || IsNullOrEmpty(user.UserMetadata.Name) || IsNullOrEmpty(user.UserMetadata.LastName) || IsNullOrEmpty(user.UserMetadata.Address)))
+            if (IsValidUser(user))
                 usersToReturn.Add(new User(user.UserId, user.Email, user.UserMetadata.Name, user.UserMetadata.LastName, user.UserMetadata.Address));
         }
         return Ok(usersToReturn); //if empty it is still OK, client will handle it
@@ -143,6 +144,16 @@ public class UsersController(UserRepository userRepository, RestClient client, I
     }
 
     //true if the Auth0 response is missing, has an unexpected status, or lacks a required body
+    //validates that an Auth0 user contains all required non-empty fields
+    private static bool IsValidUser(Auth0UserDeserialize user) =>
+        user != null &&
+        !IsNullOrWhiteSpace(user.UserId) &&
+        !IsNullOrWhiteSpace(user.Email) &&
+        user.UserMetadata != null &&
+        !IsNullOrWhiteSpace(user.UserMetadata.Name) &&
+        !IsNullOrWhiteSpace(user.UserMetadata.LastName) &&
+        !IsNullOrWhiteSpace(user.UserMetadata.Address);
+
     private static bool IsBadResponse(RestResponse response, HttpStatusCode expected, bool requireContent = true) =>
         response == null || response.StatusCode != expected || (requireContent && IsNullOrEmpty(response.Content));
 }

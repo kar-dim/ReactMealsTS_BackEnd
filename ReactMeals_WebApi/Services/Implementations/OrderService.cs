@@ -7,12 +7,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ReactMeals_WebApi.Services.Implementations
 {
-    public class OrderService(IDishesCacheService cache, OrderRepository orderRepo) : IOrderService
+    public class OrderService(IDishesCacheService cache, OrderRepository orderRepo, ILogger<OrderService> logger = null) : IOrderService
     {
+        private const int MaxOrderItemsCount = 100;
+        private const decimal MaxOrderTotal = 9999999999999999.99m;
+
         //Create the order, write to db
         public async Task<Result> CreateOrderAsync(WebOrderDTO dto, string userId)
         {
-            if (dto?.Order == null || string.IsNullOrWhiteSpace(userId) || dto.Order.Count == 0 || dto.Order.Count > 100 ||
+            if (dto?.Order == null || string.IsNullOrWhiteSpace(userId) || dto.Order.Count == 0 || dto.Order.Count > MaxOrderItemsCount ||
                 dto.Order.Any(item => item == null || item.Dish_counter <= 0 || item.DishId <= 0))
                 return Result.Failure("Invalid order data");
 
@@ -57,7 +60,7 @@ namespace ReactMeals_WebApi.Services.Implementations
             {
                 return Result.Failure("Order total is too large");
             }
-            if (totalCost > 9999999999999999.99m)
+            if (totalCost > MaxOrderTotal)
                 return Result.Failure("Order total is too large");
 
             var order = WebOrderDTOMapping.OrderDTOtoOrder(sanitizedDto, totalCost, userId);
@@ -73,8 +76,10 @@ namespace ReactMeals_WebApi.Services.Implementations
             {
                 await orderRepo.AddAsync(order);
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex)
             {
+                logger?.LogError(ex, "Failed to persist order for user {UserId}: {ErrorMessage}. Inner: {InnerMessage}",
+                    userId, ex.Message, ex.InnerException?.Message);
                 return Result.Failure("Order references a user or dish that is no longer available");
             }
             return Result.Success();
