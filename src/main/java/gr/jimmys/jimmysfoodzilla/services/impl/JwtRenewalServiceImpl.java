@@ -5,7 +5,6 @@ import gr.jimmys.jimmysfoodzilla.services.api.JwtService;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -16,32 +15,40 @@ import java.time.format.DateTimeFormatter;
 public class JwtRenewalServiceImpl implements JwtRenewalService {
     private final Logger logger = LoggerFactory.getLogger(JwtRenewalServiceImpl.class);
 
-    @Autowired
-    private JwtService jwtService;
-
+    private final JwtService jwtService;
     private static final DateTimeFormatter EXPIRY_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-    private String managementApiToken;
+    private volatile String managementApiToken = "";
+    private volatile boolean running = true;
+    private Thread renewalThread;
 
-    public JwtRenewalServiceImpl() {
-        setManagementApiToken("");
+    public JwtRenewalServiceImpl(JwtService jwtService) {
+        this.jwtService = jwtService;
     }
 
     @PostConstruct
     public void init() {
-        Thread renewalThread = new Thread(this::renewalLoop, "m2m-token-renewal");
+        renewalThread = new Thread(this::renewalLoop, "m2m-token-renewal");
         renewalThread.setDaemon(true);
         renewalThread.start();
     }
 
+    @jakarta.annotation.PreDestroy
+    public void stop() {
+        running = false;
+        if (renewalThread != null) {
+            renewalThread.interrupt();
+        }
+    }
+
     private void renewalLoop() {
         logger.info("M2M token renewal thread started");
-        while (true) {
+        while (running) {
             try {
                 logger.info("Retrieving local M2M token...");
                 var token = jwtService.retrieveToken();
-                if (token == null || token.getExpiryDate().isBefore(LocalDateTime.now())) {
-                    logger.info("No token found in db, or it is expired, renewing...");
+                if (token == null || token.getExpiryDate() == null || token.getExpiryDate().isBefore(LocalDateTime.now().plusSeconds(30))) {
+                    logger.info("No token found in db, or it is expired/near-expiry, renewing...");
                     var newAccessToken = jwtService.renewToken();
                     if (newAccessToken == null) {
                         Thread.sleep(20 * 1000);
@@ -59,24 +66,40 @@ public class JwtRenewalServiceImpl implements JwtRenewalService {
                 logger.warn("M2M renewal thread interrupted, stopping renewal");
                 Thread.currentThread().interrupt();
                 return;
+            } catch (Exception ex) {
+                logger.error("Unexpected error in M2M token renewal loop: {}", ex.getMessage(), ex);
+                try {
+                    Thread.sleep(10_000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
             }
         }
     }
 
-    // sleep until 30s before expiry, returns immediately if that moment has already passed
+    // sleep until 30s before expiry; enforces minimum 5s pause to prevent CPU busy-spin
     private void sleepUntilRefresh(LocalDateTime expiryDate) throws InterruptedException {
+        if (expiryDate == null) {
+            Thread.sleep(5000);
+            return;
+        }
         var sleepTime = Duration.between(LocalDateTime.now(), expiryDate.minusSeconds(30));
-        if (!sleepTime.isNegative() && !sleepTime.isZero())
-            Thread.sleep(sleepTime.toMillis());
+        long millis = sleepTime.toMillis();
+        if (millis <= 0) {
+            Thread.sleep(5000);
+        } else {
+            Thread.sleep(millis);
+        }
     }
 
     @Override
-    public synchronized String getManagementApiToken() {
+    public String getManagementApiToken() {
         return managementApiToken;
     }
 
     @Override
-    public synchronized void setManagementApiToken(String value) {
-        this.managementApiToken = value;
+    public void setManagementApiToken(String value) {
+        this.managementApiToken = value != null ? value : "";
     }
 }

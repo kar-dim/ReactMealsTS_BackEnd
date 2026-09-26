@@ -1,5 +1,6 @@
 package gr.jimmys.jimmysfoodzilla.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -13,10 +14,12 @@ import lombok.NoArgsConstructor;
 public class WebOrderItemDTO {
     @Min(1)
     @JsonProperty("dishid")
+    @JsonAlias({"dishId", "DishId"})
     private int dishId;
 
     @Min(1)
     @Max(100)
     @JsonProperty("dish_counter")
+    @JsonAlias({"dishCounter", "DishCounter", "dish_counter"})
     private int dishCounter;
 }

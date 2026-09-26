@@ -1,6 +1,5 @@
 package gr.jimmys.jimmysfoodzilla.security;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -22,11 +21,16 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Autowired
-    private JwtDecoder userJwtDecoder;
+    private final JwtDecoder userJwtDecoder;
+
+    public SecurityConfig(JwtDecoder userJwtDecoder) {
+        this.userJwtDecoder = userJwtDecoder;
+    }
 
     private static final List<String> ALLOWED_ORIGINS = List.of(
             "http://localhost:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:3000",
             "https://react-meals-ts-front-end.vercel.app"
     );
     private static final List<String> ALLOWED_METHODS = List.of(
@@ -72,11 +76,12 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(requests -> requests
                         // Public endpoints
+                        .requestMatchers(HttpMethod.GET, "/dishimages/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/Dishes/GetDishes").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/Dishes/GetDish/**").permitAll()
                         // Authenticated user endpoints
                         .requestMatchers(HttpMethod.POST, "/api/Dishes/Order").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/Dishes/GetUserOrders/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/Dishes/GetUserOrders", "/api/Dishes/GetUserOrders/**").authenticated()
                         // Admin-only endpoints
                         .requestMatchers(HttpMethod.POST, "/api/Dishes/AddDish").hasAuthority("admin:admin")
                         .requestMatchers(HttpMethod.DELETE, "/api/Dishes/DeleteDish/**").hasAuthority("admin:admin")

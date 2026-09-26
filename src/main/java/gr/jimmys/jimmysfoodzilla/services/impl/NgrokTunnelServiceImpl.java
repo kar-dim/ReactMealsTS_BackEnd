@@ -8,8 +8,12 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Service;
+
 import java.util.List;
 
+@Profile("!test")
 @Service
 public class NgrokTunnelServiceImpl implements TunnelService {
     private final Logger logger = LoggerFactory.getLogger(NgrokTunnelServiceImpl.class);
@@ -23,6 +27,8 @@ public class NgrokTunnelServiceImpl implements TunnelService {
     @Value("${isdevelopment}")
     private boolean isDev;
 
+    private volatile Process ngrokProcess;
+
     @EventListener(ApplicationReadyEvent.class)
     @Override
     public void startTunnel() {
@@ -32,19 +38,18 @@ public class NgrokTunnelServiceImpl implements TunnelService {
             try {
                 logger.info("Killing any existing ngrok instances...");
                 Process kill = new ProcessBuilder(List.of("taskkill", "/f", "/im", "ngrok.exe"))
+                        .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                        .redirectError(ProcessBuilder.Redirect.DISCARD)
                         .start();
-                int killCode = kill.waitFor();
-                if (killCode == 0)
-                    logger.info("Existing ngrok instance terminated");
-                else
-                    logger.info("No existing ngrok instance found (taskkill exit: {})", killCode);
+                kill.waitFor();
 
                 logger.info("Starting ngrok tunnel on port {}...", port);
-                Process ngrok = new ProcessBuilder(
-                        List.of("ngrok", "http", "--domain=" + ngrokUrl, String.valueOf(port)))
-                        .inheritIO()
+                ngrokProcess = new ProcessBuilder(
+                        List.of("ngrok", "http", "--url=" + ngrokUrl, String.valueOf(port)))
+                        .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                        .redirectError(ProcessBuilder.Redirect.DISCARD)
                         .start();
-                int exitCode = ngrok.waitFor();
+                int exitCode = ngrokProcess.waitFor();
                 logger.warn("ngrok process exited with code {}", exitCode);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -56,5 +61,13 @@ public class NgrokTunnelServiceImpl implements TunnelService {
         ngrokThread.setDaemon(true);
         ngrokThread.setName("ngrok-tunnel");
         ngrokThread.start();
+    }
+
+    @jakarta.annotation.PreDestroy
+    public void stopTunnel() {
+        if (ngrokProcess != null && ngrokProcess.isAlive()) {
+            logger.info("Stopping ngrok process...");
+            ngrokProcess.destroyForcibly();
+        }
     }
 }

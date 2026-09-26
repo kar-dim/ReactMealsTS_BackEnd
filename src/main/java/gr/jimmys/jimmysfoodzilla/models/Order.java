@@ -16,7 +16,7 @@ import java.util.List;
 public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int Id;
+    private int id;
 
     @Column(name = "TotalCost", precision = 18, scale = 2)
     private BigDecimal totalCost;

@@ -35,7 +35,6 @@ public class AddDishDTO {
     @JsonProperty("dish_extended_info")
     private String dishExtendedInfo;
 
-    @NotBlank
     @Size(max = 7_000_000)
     @JsonProperty("dish_image_base64")
     private String dishImageBase64;

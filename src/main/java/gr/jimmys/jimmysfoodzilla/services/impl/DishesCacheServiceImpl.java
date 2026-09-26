@@ -33,8 +33,27 @@ public class DishesCacheServiceImpl implements DishesCacheService {
     }
 
     @Override
+    public Dish getDishByName(String dishName) {
+        if (dishName == null)
+            return null;
+        return inMemoryDishes.stream()
+                .filter(dish -> dish.getName().equalsIgnoreCase(dishName.trim()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    @Override
     public List<Dish> getDishes() {
         return inMemoryDishes;
+    }
+
+    @Override
+    public List<Dish> getDishes(List<Integer> dishIds) {
+        List<Dish> snapshot = inMemoryDishes;
+        Set<Integer> idSet = new HashSet<>(dishIds);
+        return snapshot.stream()
+                .filter(dish -> idSet.contains(dish.getId()))
+                .toList();
     }
 
     @Override

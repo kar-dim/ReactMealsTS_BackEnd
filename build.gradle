@@ -35,6 +35,7 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    jvmArgs = ['-Djava.library.path=libs']
 }
 
 tasks.withType(JavaExec).configureEach {

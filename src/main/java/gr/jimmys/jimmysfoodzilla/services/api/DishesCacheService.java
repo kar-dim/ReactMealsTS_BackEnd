@@ -7,7 +7,9 @@ import java.util.List;
 
 public interface DishesCacheService {
     Dish getDish(int dishId);
+    Dish getDishByName(String dishName);
     List<Dish> getDishes();
+    List<Dish> getDishes(List<Integer> dishIds);
     List<Dish> getDishes(List<Integer> dishIds, EntityManager em);
     boolean existDishByName(String dishNameToCheck);
     void addCacheEntry(Dish dish);

@@ -27,6 +27,15 @@ public class DishImageServiceImpl implements DishImageService {
             new MagicBytes(new byte[]{(byte) 0x42, (byte) 0x4D}, "bmp")
     );
 
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        try {
+            Files.createDirectories(IMAGE_FOLDER);
+        } catch (IOException e) {
+            logger.error("Could not create images folder: {}", e.getMessage());
+        }
+    }
+
     @Override
     public String validateImage(byte[] imageData) {
         if (imageData == null)
@@ -41,9 +50,10 @@ public class DishImageServiceImpl implements DishImageService {
     }
 
     private Path safeResolve(String fileName) {
-        // Prevent path traversal: resolve then verify the result is still inside IMAGE_FOLDER
+        if (fileName == null || fileName.isBlank())
+            return null;
         Path resolved = IMAGE_FOLDER.toAbsolutePath().normalize()
-                .resolve(Paths.get(fileName).getFileName()); // getFileName() strips any directory components
+                .resolve(Paths.get(fileName).getFileName());
         if (!resolved.startsWith(IMAGE_FOLDER.toAbsolutePath().normalize()))
             throw new SecurityException("Path traversal attempt detected: " + fileName);
         return resolved;
@@ -51,8 +61,12 @@ public class DishImageServiceImpl implements DishImageService {
 
     @Override
     public void deleteImage(String fileName) {
+        if (fileName == null || fileName.isBlank())
+            return;
         try {
-            Files.deleteIfExists(safeResolve(fileName));
+            Path path = safeResolve(fileName);
+            if (path != null)
+                Files.deleteIfExists(path);
         } catch (IOException ioe) {
             logger.error("Could not remove file with name: {}", fileName);
         }
@@ -60,8 +74,15 @@ public class DishImageServiceImpl implements DishImageService {
 
     @Override
     public void saveImage(String fileName, byte[] data) {
+        if (fileName == null || fileName.isBlank() || data == null)
+            return;
         try {
-            Files.write(safeResolve(fileName), data);
+            Path path = safeResolve(fileName);
+            if (path != null) {
+                if (path.getParent() != null)
+                    Files.createDirectories(path.getParent());
+                Files.write(path, data);
+            }
         } catch (IOException e) {
             logger.error("Could not create static image file with file name: {}", fileName);
         }

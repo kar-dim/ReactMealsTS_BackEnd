@@ -18,7 +18,7 @@ public class Token {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "Id")
-    private int Id;
+    private int id;
 
     //base64 encoded
     @Column(name = "TokenValue", columnDefinition = "VARCHAR(MAX)")

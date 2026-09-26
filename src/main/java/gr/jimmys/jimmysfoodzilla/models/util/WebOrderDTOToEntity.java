@@ -15,7 +15,15 @@ public class WebOrderDTOToEntity {
         newOrder.setUser(user);
         newOrder.setTotalCost(cost);
         var orderItems = dishesFromOrder.stream()
-                .map(dish -> new OrderItem(0, counterById.get(dish.getId()), newOrder, dish))
+                .map(dish -> new OrderItem(
+                        0,
+                        counterById.get(dish.getId()),
+                        newOrder,
+                        dish,
+                        dish.getName(),
+                        dish.getDescription(),
+                        dish.getPrice()
+                ))
                 .toList();
         newOrder.setOrderItems(orderItems);
         return newOrder;

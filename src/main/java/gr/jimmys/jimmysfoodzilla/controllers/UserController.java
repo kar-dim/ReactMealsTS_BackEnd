@@ -44,7 +44,7 @@ public class UserController {
             List<Auth0UserDeserialize> users = managementClient.getUsers();
             if (users.isEmpty()) {
                 logger.error("Users returned are malformed! Check Auth0 configuration");
-                return ResponseEntity.internalServerError().build();
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, gr.jimmys.jimmysfoodzilla.common.ErrorMessages.INTERNAL_ERROR);
             }
             var usersToReturn = users.stream()
                     .filter(Objects::nonNull)
@@ -56,12 +56,13 @@ public class UserController {
                     .toList();
             return new ResponseEntity<>(usersToReturn, HttpStatus.OK);
         } catch (Auth0ManagementException e) {
-            return ResponseEntity.internalServerError().build();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, gr.jimmys.jimmysfoodzilla.common.ErrorMessages.INTERNAL_ERROR);
         }
     }
 
     @PostMapping("/CreateUser")
-    public ResponseEntity<User> createUser(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader, @RequestBody User userToCreate) {
+    public ResponseEntity<User> createUser(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
+                                           @RequestBody User userToCreate) {
         if (authHeader == null || !authHeader.startsWith("Bearer "))
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         try {
@@ -70,7 +71,7 @@ public class UserController {
             logger.warn("CreateUser: M2M token validation failed - {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        if (userToCreate.getUserId() == null || userToCreate.getUserId().isBlank())
+        if (userToCreate == null || userToCreate.getUserId() == null || userToCreate.getUserId().isBlank())
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing user id");
         if (userRepository.existsById(userToCreate.getUserId())) {
             logger.error("CreateUser: user {} already exists", userToCreate.getUserId());
@@ -78,29 +79,36 @@ public class UserController {
         }
         userRepository.save(userToCreate);
         logger.info("New User Created [Sent from Auth0]: {}", userToCreate);
-        return new ResponseEntity<>(userToCreate, HttpStatus.OK);
+        return ResponseEntity.ok(userToCreate);
     }
 
     @PutMapping("/UpdateUser")
     public ResponseEntity<Void> updateUser(@RequestBody User newUser) {
+        if (newUser == null || newUser.getUserId() == null || newUser.getUserId().isBlank())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing user id");
+        if (!userRepository.existsById(newUser.getUserId()))
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+
         try {
             var userToSend = new Auth0UserSerialize(newUser.getEmail(),
                     new UserMetadata(newUser.getName(), newUser.getLastName(), newUser.getAddress()));
             managementClient.updateUser(newUser.getUserId(), userToSend);
             userRepository.save(newUser);
-            return new ResponseEntity<>(HttpStatus.OK);
+            return ResponseEntity.ok().build();
         } catch (Auth0ManagementException e) {
-            return ResponseEntity.internalServerError().build();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, gr.jimmys.jimmysfoodzilla.common.ErrorMessages.INTERNAL_ERROR);
         }
     }
 
     @DeleteMapping("/DeleteUser/{userId}")
     public ResponseEntity<Void> deleteUser(@PathVariable("userId") String userId) {
+        if (userId == null || userId.isBlank())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing user id");
         try {
             managementClient.deleteUser(userId);
-            return new ResponseEntity<>(HttpStatus.OK);
+            return ResponseEntity.ok().build();
         } catch (Auth0ManagementException e) {
-            return ResponseEntity.internalServerError().build();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, gr.jimmys.jimmysfoodzilla.common.ErrorMessages.INTERNAL_ERROR);
         }
     }
 }

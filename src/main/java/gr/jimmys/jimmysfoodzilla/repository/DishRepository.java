@@ -10,4 +10,6 @@ public interface DishRepository extends JpaRepository<Dish, Integer> {
 
     @Query("SELECT d FROM Dish d ORDER BY d.id ASC")
     List<Dish> findAllAscendingById();
+
+    boolean existsByUrl(String url);
 }

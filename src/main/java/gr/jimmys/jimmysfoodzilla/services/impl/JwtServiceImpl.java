@@ -9,7 +9,6 @@ import gr.jimmys.jimmysfoodzilla.services.api.JwtService;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -27,25 +26,27 @@ public class JwtServiceImpl implements JwtService {
 
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
 
-    @Autowired
-    private TokenRepository tokenRepository;
-
-    @Autowired
-    private HttpClient httpClient;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Value("${auth0.domain}")
-    private String domain;
-
-    @Value("${auth0.m2m_clientid}")
-    private String clientId;
-
-    @Value("${auth0.m2m_clientsecret}")
-    private String clientSecret;
-
+    private final TokenRepository tokenRepository;
+    private final HttpClient httpClient;
+    private final ObjectMapper objectMapper;
+    private final String domain;
+    private final String clientId;
+    private final String clientSecret;
     private ManagementInputDTO requestBody;
+
+    public JwtServiceImpl(TokenRepository tokenRepository,
+                          HttpClient httpClient,
+                          ObjectMapper objectMapper,
+                          @Value("${auth0.domain}") String domain,
+                          @Value("${auth0.m2m_clientid}") String clientId,
+                          @Value("${auth0.m2m_clientsecret}") String clientSecret) {
+        this.tokenRepository = tokenRepository;
+        this.httpClient = httpClient;
+        this.objectMapper = objectMapper;
+        this.domain = domain;
+        this.clientId = clientId;
+        this.clientSecret = clientSecret;
+    }
 
     @PostConstruct
     public void init() {
