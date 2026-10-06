@@ -140,7 +140,7 @@ public class UnitTest1
         var testDish = new Dish(1, "Cheeseburger", "Tasty burger", 10.00m) { Dish_url = "burger.jpg" };
         context.Users.Add(testUser);
         context.Dishes.Add(testDish);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var cache = new FakeDishesCacheService(new List<Dish> { testDish });
         var orderRepo = new OrderRepository(context);
@@ -157,7 +157,7 @@ public class UnitTest1
 
         Assert.True(result.IsSuccess);
 
-        var savedOrder = await context.Orders.Include(o => o.Order).FirstOrDefaultAsync();
+        var savedOrder = await context.Orders.Include(o => o.Order).FirstOrDefaultAsync(TestContext.Current.CancellationToken);
         Assert.NotNull(savedOrder);
         Assert.Equal(50.00m, savedOrder.TotalCost);
         Assert.Single(savedOrder.Order);
@@ -178,7 +178,7 @@ public class UnitTest1
         using var context = new MainDbContext(options);
         var originalDish = new Dish(1, "Original", "Desc", 15.00m, "Extended") { Dish_url = "original_guid.jpg" };
         context.Dishes.Add(originalDish);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var cache = new FakeDishesCacheService(new List<Dish> { originalDish });
         var dishRepo = new DishRepository(context);
@@ -227,12 +227,12 @@ public class UnitTest1
         var testDish = new Dish(1, "Cheeseburger", "Tasty burger", 10.00m) { Dish_url = "burger.jpg" };
         context.Users.Add(testUser);
         context.Dishes.Add(testDish);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var order1 = new WebOrder { Id = 1, UserId = "auth0|123", TotalCost = 10.00m, Order = new List<WebOrderItem> { new(1, 1) { Dish_name = "Cheeseburger", Price = 10.00m } } };
         var order2 = new WebOrder { Id = 2, UserId = "auth0|123", TotalCost = 20.00m, Order = new List<WebOrderItem> { new(1, 2) { Dish_name = "Cheeseburger", Price = 10.00m } } };
         context.Orders.AddRange(order1, order2);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var orderRepo = new OrderRepository(context);
         var orders = await orderRepo.GetUserOrdersAsync("auth0|123");
